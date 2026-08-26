@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Mission Log — Task Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0A0E14; }
+  body { font-family: 'Inter', sans-serif; color: #E8EDF2; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .disp { font-family: 'Space Grotesk', sans-serif; }
+  ::placeholder { color: #5B6675; }
+  table { border-collapse: collapse; width: 100%; }
+  .rowhover:hover { background: #161D26 !important; }
+  .btn { cursor: pointer; transition: all .12s ease; }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: #4F8CFF !important; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo } = React;
+const { createClient } = supabase;
+
+const SUPABASE_URL = "https://ljrdxacphmquwxllvayn.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_mFsZmj8cn6o3GRZfe2SObA_YEvFF4yS";
+const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+const STATUSES = ["To Do", "In Progress", "Done"];
+const PRIORITIES = ["High", "Medium", "Low"];
+const GROUPS = ["SPMT", "Faculty Advisors", "RA", "Other Officer", "Staff", "Student"];
+const STATUS_COLOR = { "To Do": "#8593A3", "In Progress": "#4F8CFF", "Done": "#3ECF9A" };
+const PRIORITY_COLOR = { High: "#E8A33D", Medium: "#4F8CFF", Low: "#5B6675" };
+
+function isOverdue(t) {
+  if (!t.deadline || t.status === "Done") return false;
+  const d = new Date(t.deadline);
+  return !isNaN(d) && d < new Date();
+}
+function fmtDate(s) {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+const inputStyle = { width: "100%", background: "#0A0E14", border: "1px solid #1F2733", borderRadius: 6, padding: "8px 10px", color: "#E8EDF2", fontSize: 13 };
+
+function Field({ label, children, style }) {
+  return <div style={{ marginBottom: 12, ...style }}>
+    <div style={{ fontSize: 11.5, color: "#8593A3", marginBottom: 5 }}>{label}</div>
+    {children}
+  </div>;
+}
+function FilterSelect({ value, onChange, options, labelPrefix = "" }) {
+  return <select value={value} onChange={e => onChange(e.target.value)}
+    style={{ background: "#121821", border: "1px solid #1F2733", borderRadius: 6, padding: "8px 10px", color: "#E8EDF2", fontSize: 12.5 }}>
+    {options.map(o => <option key={o} value={o}>{o === "All" ? "All" : labelPrefix + o}</option>)}
+  </select>;
+}
+
+function AuthScreen() {
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(""); setMessage("");
+    if (!email.trim() || !password) { setError("Email and password are required."); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    setBusy(true);
+    try {
+      if (mode === "signin") {
+        const { error } = await db.auth.signInWithPassword({
+          email: email.trim(),
+          password
+        });
+        if (error) throw error;
+      } else {
+        const { data, error } = await db.auth.signUp({
+          email: email.trim(),
+          password
+        });
+        if (error) throw error;
+        if (data.session) {
+          setMessage("Account created. Continue to link your Team ID.");
+        } else {
+          setMessage("Account created. Check your email for the confirmation link, then come back and sign in.");
+        }
+      }
+    } catch (err) {
+      console.error("Authentication error:", err);
+      setError(err.message || "Authentication failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <form onSubmit={submit} style={{ background: "#121821", border: "1px solid #1F2733", borderRadius: 10, width: "100%", maxWidth: 400, padding: 26 }}>
+      <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "#4F8CFF", marginBottom: 6 }}>TEAM OPS · TASK TRACKER</div>
+      <div className="disp" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Mission Log</div>
+      <div style={{ fontSize: 12.5, color: "#8593A3", marginBottom: 20 }}>
+        {mode === "signin" ? "Sign in with your Supabase account." : "Create your Supabase account first."}
+      </div>
+
+      <Field label="Email">
+        <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}
+          placeholder="you@example.com" style={inputStyle} />
+      </Field>
+      <Field label="Password">
+        <input type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          value={password} onChange={e => setPassword(e.target.value)}
+          placeholder="At least 6 characters" style={inputStyle} />
+      </Field>
+
+      {error && <div style={{ color: "#E85D5D", fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
+      {message && <div style={{ color: "#3ECF9A", fontSize: 12.5, marginBottom: 10, lineHeight: 1.45 }}>{message}</div>}
+
+      <button className="btn" disabled={busy} type="submit"
+        style={{ width: "100%", background: "#4F8CFF", border: "none", color: "#08111F", borderRadius: 6, padding: "10px 0", fontSize: 13.5, fontWeight: 600 }}>
+        {busy ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
+      </button>
+
+      <button type="button" className="btn" disabled={busy}
+        onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}
+        style={{ width: "100%", background: "transparent", border: "none", color: "#4F8CFF", padding: "12px 0 0", fontSize: 12.5 }}>
+        {mode === "signin" ? "First time here? Create an account" : "Already have an account? Sign in"}
+      </button>
+    </form>
+  </div>;
+}
+
+function ClaimScreen({ user, onClaim, onSignOut }) {
+  const [teamId, setTeamId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function claim(e) {
+    e.preventDefault();
+    setError("");
+    const value = teamId.trim();
+    if (!value) { setError("Enter your pre-assigned Team ID."); return; }
+    setBusy(true);
+    try {
+      const { error } = await db.rpc("claim_membership", { p_team_id: value });
+      if (error) throw error;
+      await onClaim();
+    } catch (err) {
+      console.error("Membership claim error:", err);
+      setError(err.message || "Could not claim this Team ID.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <form onSubmit={claim} style={{ background: "#121821", border: "1px solid #1F2733", borderRadius: 10, width: "100%", maxWidth: 430, padding: 26 }}>
+      <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "#4F8CFF", marginBottom: 6 }}>FIRST TIME HERE</div>
+      <div className="disp" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Link your Team ID</div>
+      <div style={{ fontSize: 12.5, color: "#8593A3", lineHeight: 1.55, marginBottom: 18 }}>
+        Signed in as <strong style={{ color: "#E8EDF2" }}>{user.email}</strong>.
+        Enter the Team ID already assigned to you by the project team. Your account will be linked to that member record.
+      </div>
+      <Field label="Team / Office ID">
+        <input value={teamId} onChange={e => setTeamId(e.target.value)}
+          placeholder="e.g. 26-13860-0301" style={inputStyle} />
+      </Field>
+      {error && <div style={{ color: "#E85D5D", fontSize: 12.5, marginBottom: 10, lineHeight: 1.45 }}>{error}</div>}
+      <button className="btn" disabled={busy} type="submit"
+        style={{ width: "100%", background: "#4F8CFF", border: "none", color: "#08111F", borderRadius: 6, padding: "10px 0", fontSize: 13.5, fontWeight: 600 }}>
+        {busy ? "Linking…" : "Link Team ID"}
+      </button>
+      <div style={{ marginTop: 14, fontSize: 11.5, color: "#5B6675", lineHeight: 1.5 }}>
+        SPMT Team IDs cannot be self-claimed. Those accounts must be linked by the project administrator.
+      </div>
+      <button type="button" className="btn" onClick={onSignOut}
+        style={{ marginTop: 12, background: "transparent", border: "1px solid #1F2733", color: "#8593A3", borderRadius: 6, padding: "9px 14px", fontSize: 12.5 }}>
+        Sign Out
+      </button>
+    </form>
+  </div>;
+}
+
+function App() {
+  const [session, setSession] = useState(undefined);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [membershipReady, setMembershipReady] = useState(false);
+  const [membershipError, setMembershipError] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [dataLoading, setDataLoading] = useState(false);
+
+  const [view, setView] = useState("table");
+  const [search, setSearch] = useState("");
+  const [memberFilter, setMemberFilter] = useState("All");
+  const [meetingFilter, setMeetingFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ member: "", meetingId: "", task: "", assignedDate: "", deadline: "", status: "To Do", priority: "Medium", remarks: "" });
+  const [formError, setFormError] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState(null);
+  const [memberForm, setMemberForm] = useState({ name: "", email: "", mobile: "", teamId: "", role: "Member", group: "SPMT", joinedDate: "" });
+  const [memberFormError, setMemberFormError] = useState("");
+  const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    db.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSession(data.session || null);
+      setAuthReady(true);
+    }).catch(err => {
+      console.error("Supabase session error:", err);
+      if (alive) setAuthReady(true);
+    });
+
+    const { data: listener } = db.auth.onAuthStateChange((_event, nextSession) => {
+      if (!alive) return;
+      setSession(nextSession || null);
+      setCurrentUser(null);
+      setMembershipReady(false);
+      setMembershipError("");
+    });
+
+    return () => {
+      alive = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function loadMembership(user) {
+    setMembershipReady(false);
+    setMembershipError("");
+    if (!user) {
+      setCurrentUser(null);
+      setMembershipReady(true);
+      return null;
+    }
+
+    const { data, error } = await db.from("members").select("*").eq("auth_user_id", user.id).maybeSingle();
+    if (error) {
+      console.error("Membership lookup error:", error);
+      setMembershipError(error.message || "Could not check your membership.");
+      setMembershipReady(true);
+      return null;
+    }
+
+    if (!data) {
+      setCurrentUser(null);
+      setMembershipReady(true);
+      return null;
+    }
+
+    const member = {
+      id: data.id,
+      teamId: data.team_id,
+      name: data.name,
+      role: data.role || "",
+      group: data.group_name,
+      email: data.email || "",
+      mobile: data.mobile || "",
+      joinedDate: data.joined_date || "",
+      authUserId: data.auth_user_id
+    };
+    setCurrentUser(member);
+    setMembershipReady(true);
+    return member;
+  }
+
+  useEffect(() => {
+    if (!authReady) return;
+    loadMembership(session?.user || null);
+  }, [session, authReady]);
+
+  async function loadData() {
+    if (!session) return;
+    setDataLoading(true);
+    try {
+      const [{ data: memberData, error: memberError }, { data: taskData, error: taskError }] = await Promise.all([
+        db.from("members").select("*").order("id"),
+        db.from("tasks").select("*").order("id")
+      ]);
+      if (memberError) throw memberError;
+      if (taskError) throw taskError;
+
+      setMembers((memberData || []).map(m => ({
+        id: m.id, teamId: m.team_id, name: m.name, role: m.role || "",
+        group: m.group_name, email: m.email || "", mobile: m.mobile || "",
+        joinedDate: m.joined_date || "", authUserId: m.auth_user_id
+      })));
+
+      setTasks((taskData || []).map(t => ({
+        id: t.id,
+        taskCode: t.task_code || "",
+        member: t.member,
+        meetingId: t.meeting_id || "",
+        task: t.task,
+        assignedDate: t.assigned_date || "",
+        deadline: t.deadline || "",
+        status: t.status,
+        priority: t.priority,
+        remarks: t.remarks || ""
+      })));
+    } catch (error) {
+      console.error("Supabase data loading error:", error);
+      alert("Could not load Mission Log data from Supabase. Open the browser console for details.");
+    } finally {
+      setDataLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (currentUser && membershipReady) loadData();
+  }, [currentUser?.id, membershipReady]);
+
+  async function refreshMembership() {
+    if (!session?.user) return;
+    await loadMembership(session.user);
+  }
+
+  async function handleLogout() {
+    await db.auth.signOut();
+    setCurrentUser(null);
+    setMembers([]);
+    setTasks([]);
+  }
+
+  const canEditTasks = !!currentUser && (currentUser.group === "SPMT" || currentUser.group === "Faculty Advisors");
+  const canManageMembers = !!currentUser && currentUser.group === "SPMT";
+
+  function nextTaskCode() {
+    const nums = tasks.map(t => parseInt(String(t.taskCode || "").replace(/^T/i, ""), 10)).filter(Number.isFinite);
+    const n = nums.length ? Math.max(...nums) + 1 : 1;
+    return "T" + String(n).padStart(3, "0");
+  }
+
+  async function saveTask(formValue) {
+    const payload = {
+      member: formValue.member.trim(),
+      meeting_id: formValue.meetingId.trim(),
+      task: formValue.task.trim(),
+      assigned_date: formValue.assignedDate || null,
+      deadline: formValue.deadline || null,
+      status: formValue.status,
+      priority: formValue.priority,
+      remarks: formValue.remarks.trim()
+    };
+
+    try {
+      if (editingId !== null) {
+        const { data, error } = await db.from("tasks").update(payload).eq("id", editingId).select("*").single();
+        if (error) throw error;
+        setTasks(prev => prev.map(t => t.id === editingId ? {
+          id: data.id, taskCode: data.task_code || "", member: data.member, meetingId: data.meeting_id || "",
+          task: data.task, assignedDate: data.assigned_date || "", deadline: data.deadline || "",
+          status: data.status, priority: data.priority, remarks: data.remarks || ""
+        } : t));
+      } else {
+        payload.task_code = nextTaskCode();
+        const { data, error } = await db.from("tasks").insert(payload).select("*").single();
+        if (error) throw error;
+        setTasks(prev => [...prev, {
+          id: data.id, taskCode: data.task_code || "", member: data.member, meetingId: data.meeting_id || "",
+          task: data.task, assignedDate: data.assigned_date || "", deadline: data.deadline || "",
+          status: data.status, priority: data.priority, remarks: data.remarks || ""
+        }]);
+      }
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Task save error:", error);
+      setFormError(error.message || "Could not save task.");
+    }
+  }
+
+  async function deleteTask(id) {
+    try {
+      const { error } = await db.from("tasks").delete().eq("id", id);
+      if (error) throw error;
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setConfirmDeleteId(null);
+    } catch (error) {
+      console.error("Task delete error:", error);
+      alert(error.message || "Could not delete task.");
+    }
+  }
+
+  async function updateTaskStatus(id, status) {
+    const old = tasks.find(t => t.id === id);
+    if (!old) return;
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    const { data, error } = await db.from("tasks").update({ status }).eq("id", id).select("*").single();
+    if (error) {
+      console.error("Task status update error:", error);
+      setTasks(prev => prev.map(t => t.id === id ? old : t));
+      alert(error.message || "Could not update task status.");
+      return;
+    }
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: data.status } : t));
+  }
+
+  async function updateTaskPriority(id, priority) {
+    if (!canEditTasks) return;
+    const old = tasks.find(t => t.id === id);
+    if (!old) return;
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
+    const { data, error } = await db.from("tasks").update({ priority }).eq("id", id).select("*").single();
+    if (error) {
+      console.error("Task priority update error:", error);
+      setTasks(prev => prev.map(t => t.id === id ? old : t));
+      alert(error.message || "Could not update task priority.");
+      return;
+    }
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, priority: data.priority } : t));
+  }
+
+  async function saveMember(formValue) {
+    const payload = {
+      team_id: formValue.teamId.trim(),
+      name: formValue.name.trim(),
+      role: formValue.role.trim(),
+      group_name: formValue.group,
+      email: formValue.email.trim(),
+      mobile: formValue.mobile.trim(),
+      joined_date: formValue.joinedDate || null
+    };
+
+    try {
+      if (editingMemberId !== null) {
+        const { data, error } = await db.from("members").update(payload).eq("id", editingMemberId).select("*").single();
+        if (error) throw error;
+        setMembers(prev => prev.map(m => m.id === editingMemberId ? {
+          id: data.id, teamId: data.team_id, name: data.name, role: data.role || "",
+          group: data.group_name, email: data.email || "", mobile: data.mobile || "",
+          joinedDate: data.joined_date || "", authUserId: data.auth_user_id
+        } : m));
+      } else {
+        const { data, error } = await db.from("members").insert(payload).select("*").single();
+        if (error) throw error;
+        setMembers(prev => [...prev, {
+          id: data.id, teamId: data.team_id, name: data.name, role: data.role || "",
+          group: data.group_name, email: data.email || "", mobile: data.mobile || "",
+          joinedDate: data.joined_date || "", authUserId: data.auth_user_id
+        }]);
+      }
+      setMemberModalOpen(false);
+    } catch (error) {
+      console.error("Member save error:", error);
+      setMemberFormError(error.message || "Could not save member.");
+    }
+  }
+
+  async function deleteMember(id) {
+    try {
+      const { error } = await db.from("members").delete().eq("id", id);
+      if (error) throw error;
+      setMembers(prev => prev.filter(m => m.id !== id));
+      setConfirmDeleteMemberId(null);
+    } catch (error) {
+      console.error("Member delete error:", error);
+      alert(error.message || "Could not delete member.");
+    }
+  }
+
+  const memberNames = useMemo(() => Array.from(new Set(tasks.map(t => t.member))).sort(), [tasks]);
+  const meetings = useMemo(() => Array.from(new Set(tasks.map(t => t.meetingId))).sort(), [tasks]);
+
+  const filtered = useMemo(() => tasks.filter(t => {
+    if (memberFilter !== "All" && t.member !== memberFilter) return false;
+    if (meetingFilter !== "All" && t.meetingId !== meetingFilter) return false;
+    if (statusFilter !== "All" && t.status !== statusFilter) return false;
+    if (priorityFilter !== "All" && t.priority !== priorityFilter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (!(t.task + " " + t.member + " " + t.remarks + " " + t.meetingId).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }), [tasks, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
+
+  const stats = useMemo(() => ({
+    total: tasks.length,
+    todo: tasks.filter(t => t.status === "To Do").length,
+    inProgress: tasks.filter(t => t.status === "In Progress").length,
+    done: tasks.filter(t => t.status === "Done").length,
+    overdue: tasks.filter(isOverdue).length
+  }), [tasks]);
+
+  const memberOptions = useMemo(() => {
+    const byGroup = {};
+    members.forEach(m => { (byGroup[m.group] = byGroup[m.group] || []).push(m); });
+    const known = new Set(members.map(m => m.name));
+    const legacy = Array.from(new Set(tasks.map(t => t.member))).filter(n => n && !known.has(n));
+    return { byGroup, legacy };
+  }, [members, tasks]);
+
+  if (!authReady || (session && !membershipReady)) {
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#8593A3" }}>
+      Checking Mission Log authentication…
+    </div>;
+  }
+
+  if (!session) return <AuthScreen />;
+
+  if (membershipError) {
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#121821", border: "1px solid #1F2733", borderRadius: 10, maxWidth: 520, padding: 24 }}>
+        <div className="disp" style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Membership check failed</div>
+        <div style={{ color: "#E85D5D", fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>{membershipError}</div>
+        <button className="btn" onClick={() => loadMembership(session.user)} style={{ background: "#4F8CFF", border: "none", color: "#08111F", borderRadius: 6, padding: "9px 14px" }}>Try Again</button>
+        <button className="btn" onClick={handleLogout} style={{ marginLeft: 8, background: "transparent", border: "1px solid #1F2733", color: "#8593A3", borderRadius: 6, padding: "9px 14px" }}>Sign Out</button>
+      </div>
+    </div>;
+  }
+
+  if (!currentUser) {
+    return <ClaimScreen user={session.user} onClaim={refreshMembership} onSignOut={handleLogout} />;
+  }
+
+  return <div style={{ minHeight: "100vh" }}>
+    <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 24px 60px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 22, flexWrap: "wrap", gap: 14 }}>
+        <div>
+          <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "#4F8CFF", marginBottom: 6 }}>TEAM OPS · TASK TRACKER</div>
+          <div className="disp" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5 }}>Mission Log</div>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ textAlign: "right", marginRight: 4 }}>
+            <div style={{ fontSize: 12.5 }}>{currentUser.name}</div>
+            <div style={{ fontSize: 11, color: canEditTasks ? "#3ECF9A" : "#8593A3" }}>
+              {canEditTasks ? "Editor · " + currentUser.group : "Member · " + currentUser.group}
+            </div>
+          </div>
+          {canManageMembers && <button className="btn" onClick={() => {
+            setMemberForm({ name:"", email:"", mobile:"", teamId:"", role:"Member", group:"SPMT", joinedDate:"" });
+            setEditingMemberId(null); setMemberFormError(""); setMemberModalOpen(true);
+          }} style={{ background: "transparent", color: "#4F8CFF", border: "1px solid #2A3A55", borderRadius: 6, padding: "10px 16px", fontSize: 13.5, fontWeight: 600 }}>+ Add Member</button>}
+          {canEditTasks && <button className="btn" onClick={() => {
+            setForm({ member:"", meetingId:"", task:"", assignedDate:"", deadline:"", status:"To Do", priority:"Medium", remarks:"" });
+            setEditingId(null); setFormError(""); setModalOpen(true);
+          }} style={{ background: "#4F8CFF", color: "#08111F", border: "none", borderRadius: 6, padding: "10px 16px", fontSize: 13.5, fontWeight: 600 }}>+ New Task</button>}
+          <button className="btn" onClick={handleLogout} style={{ background: "transparent", color: "#8593A3", border: "1px solid #1F2733", borderRadius: 6, padding: "10px 14px", fontSize: 12.5 }}>Log Out</button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 20 }}>
+        {[["Total", stats.total, "#E8EDF2"], ["To Do", stats.todo, STATUS_COLOR["To Do"]], ["In Progress", stats.inProgress, STATUS_COLOR["In Progress"]], ["Done", stats.done, STATUS_COLOR["Done"]], ["Overdue", stats.overdue, "#E85D5D"]].map(([label, value, color]) =>
+          <div key={label} style={{ background: "#121821", border: "1px solid #1F2733", borderRadius: 8, padding: "12px 14px" }}>
+            <div style={{ fontSize: 11.5, color: "#8593A3", marginBottom: 4 }}>{label}</div>
+            <div className="disp" style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18, alignItems: "center" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks, members, remarks…"
+          style={{ flex: "1 1 200px", minWidth: 180, background: "#121821", border: "1px solid #1F2733", borderRadius: 6, padding: "8px 10px", color: "#E8EDF2", fontSize: 13 }} />
+        <FilterSelect value={memberFilter} onChange={setMemberFilter} options={["All", ...memberNames]} />
+        <FilterSelect value={meetingFilter} onChange={setMeetingFilter} options={["All", ...meetings]} labelPrefix="Meeting " />
+        <FilterSelect value={statusFilter} onChange={setStatusFilter} options={["All", ...STATUSES]} />
+        <FilterSelect value={priorityFilter} onChange={setPriorityFilter} options={["All", ...PRIORITIES]} />
+        <div style={{ display: "flex", background: "#121821", border: "1px solid #1F2733", borderRadius: 6, overflow: "hidden" }}>
+          {["table","board","members"].map(v => <button key={v} className="btn" onClick={() => setView(v)}
+            style={{ padding: "8px 12px", background: view === v ? "#1A222D" : "transparent", border: "none", color: view === v ? "#E8EDF2" : "#8593A3", fontSize: 12.5 }}>
+            {v[0].toUpperCase()+v.slice(1)}
+          </button>)}
+        </div>
+      </div>
+
+      {dataLoading && <div style={{ color:"#5B6675", fontSize:12, marginBottom:12 }}>Refreshing data…</div>}
+
+      {view === "table" && <div style={{ background: "#121821", border: "1px solid #1F2733", borderRadius: 10, overflow: "auto" }}>
+        <table style={{ fontSize: 13 }}>
+          <thead><tr style={{ background:"#161D26", textAlign:"left" }}>
+            {["ID","Member","Meeting","Task","Assigned","Deadline","Status","Priority","Remarks",""].map(h => <th key={h} style={{ padding:"10px 12px", fontSize:11, letterSpacing:.5, color:"#8593A3", fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {filtered.map(t => {
+              const overdue = isOverdue(t);
+              const canChangeStatus = canEditTasks || t.member === currentUser.name;
+              return <tr key={t.id} className="rowhover" style={{ borderTop:"1px solid #1F2733" }}>
+                <td className="mono" style={{ padding:"10px 12px", color:"#5B6675", whiteSpace:"nowrap" }}>{t.taskCode || ("#" + t.id)}</td>
+                <td style={{ padding:"10px 12px", whiteSpace:"nowrap" }}>{t.member}</td>
+                <td className="mono" style={{ padding:"10px 12px", color:"#8593A3" }}>{t.meetingId}</td>
+                <td style={{ padding:"10px 12px", minWidth:220, maxWidth:340 }}>{t.task}</td>
+                <td style={{ padding:"10px 12px", whiteSpace:"nowrap", color:"#8593A3" }}>{fmtDate(t.assignedDate)}</td>
+                <td style={{ padding:"10px 12px", whiteSpace:"nowrap", color:overdue ? "#E85D5D" : "#8593A3" }}>{fmtDate(t.deadline)}{overdue ? " ⚠" : ""}</td>
+                <td style={{ padding:"8px 12px" }}>
+                  {canChangeStatus ? <select value={t.status} onChange={e => updateTaskStatus(t.id, e.target.value)}
+                    style={{ background:"#0A0E14", border:"1px solid " + STATUS_COLOR[t.status] + "55", color:STATUS_COLOR[t.status], borderRadius:5, padding:"4px 6px", fontSize:12 }}>
+                    {STATUSES.map(s => <option key={s}>{s}</option>)}
+                  </select> : <span style={{ color:STATUS_COLOR[t.status], fontSize:12.5 }}>{t.status}</span>}
+                </td>
+                <td style={{ padding:"8px 12px" }}>
+                  {canEditTasks ? <select value={t.priority} onChange={e => updateTaskPriority(t.id, e.target.value)}
+                    style={{ background:"#0A0E14", border:"1px solid " + PRIORITY_COLOR[t.priority] + "55", color:PRIORITY_COLOR[t.priority], borderRadius:5, padding:"4px 6px", fontSize:12 }}>
+                    {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+                  </select> : <span style={{ color:PRIORITY_COLOR[t.priority], fontSize:12.5 }}>{t.priority}</span>}
+                </td>
+                <td style={{ padding:"10px 12px", color:"#8593A3", minWidth:140, maxWidth:220 }}>{t.remarks || "—"}</td>
+                <td style={{ padding:"10px 12px", whiteSpace:"nowrap" }}>
+                  {canEditTasks && <button className="btn" onClick={() => {
+                    setForm({ member:t.member, meetingId:t.meetingId, task:t.task, assignedDate:t.assignedDate, deadline:t.deadline, status:t.status, priority:t.priority, remarks:t.remarks });
+                    setEditingId(t.id); setFormError(""); setModalOpen(true);
+                  }} style={{ background:"none", border:"none", color:"#8593A3", padding:4, marginRight:4, fontSize:12 }}>Edit</button>}
+                  {canEditTasks && <button className="btn" onClick={() => setConfirmDeleteId(t.id)}
+                    style={{ background:"none", border:"none", color:"#8593A3", padding:4, fontSize:12 }}>Delete</button>}
+                </td>
+              </tr>;
+            })}
+          </tbody>
+        </table>
+        {filtered.length === 0 && <div style={{ textAlign:"center", padding:"60px 0", color:"#5B6675", fontSize:13.5 }}>No tasks match these filters.</div>}
+      </div>}
+
+      {view === "board" && <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:14 }}>
+        {STATUSES.map(status => <div key={status}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+            <span style={{ width:8, height:8, borderRadius:"50%", background:STATUS_COLOR[status] }} />
+            <span style={{ fontSize:13, fontWeight:600 }}>{status}</span>
+            <span className="mono" style={{ fontSize:11, color:"#5B6675" }}>{filtered.filter(t => t.status === status).length}</span>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {filtered.filter(t => t.status === status).map(t => {
+              const overdue = isOverdue(t);
+              return <div key={t.id} className={canEditTasks ? "btn" : ""}
+                onClick={canEditTasks ? () => {
+                  setForm({ member:t.member, meetingId:t.meetingId, task:t.task, assignedDate:t.assignedDate, deadline:t.deadline, status:t.status, priority:t.priority, remarks:t.remarks });
+                  setEditingId(t.id); setFormError(""); setModalOpen(true);
+                } : undefined}
+                style={{ background:"#121821", border:"1px solid #1F2733", borderLeft:"3px solid " + PRIORITY_COLOR[t.priority], padding:"10px 12px", cursor:canEditTasks ? "pointer" : "default" }}>
+                <div style={{ fontSize:13, marginBottom:6, lineHeight:1.4 }}>{t.task}</div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#8593A3" }}>
+                  <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"60%" }}>{t.member}</span>
+                  <span className="mono">{t.taskCode || ("#" + t.id)}</span>
+                </div>
+                {t.deadline && <div style={{ fontSize:11, marginTop:6, color:overdue ? "#E85D5D" : "#5B6675" }}>Due {fmtDate(t.deadline)}{overdue ? " · overdue" : ""}</div>}
+              </div>;
+            })}
+            {filtered.filter(t => t.status === status).length === 0 && <div style={{ fontSize:12, color:"#3A424D", padding:"8px 0" }}>No tasks</div>}
+          </div>
+        </div>)}
+      </div>}
+
+      {view === "members" && <div style={{ background:"#121821", border:"1px solid #1F2733", borderRadius:10, overflow:"auto" }}>
+        <table style={{ fontSize:13 }}>
+          <thead><tr style={{ background:"#161D26", textAlign:"left" }}>
+            {["Team ID","Name","Group","Email","Mobile","Joined","Assigned","Completed",""].map(h => <th key={h} style={{ padding:"10px 12px", fontSize:11, letterSpacing:.5, color:"#8593A3", fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {members.map(m => <tr key={m.id} className="rowhover" style={{ borderTop:"1px solid #1F2733" }}>
+              <td className="mono" style={{ padding:"10px 12px", color:"#8593A3", whiteSpace:"nowrap" }}>{m.teamId}</td>
+              <td style={{ padding:"10px 12px", whiteSpace:"nowrap" }}>{m.name}{m.role ? <span style={{ color:"#5B6675", fontSize:11.5 }}> ({m.role})</span> : null}</td>
+              <td style={{ padding:"10px 12px", whiteSpace:"nowrap", color:"#8593A3" }}>{m.group}</td>
+              <td style={{ padding:"10px 12px", color:"#8593A3" }}>{m.email || "—"}</td>
+              <td style={{ padding:"10px 12px", color:"#8593A3", whiteSpace:"nowrap" }}>{m.mobile || "—"}</td>
+              <td style={{ padding:"10px 12px", color:"#8593A3", whiteSpace:"nowrap" }}>{fmtDate(m.joinedDate)}</td>
+              <td className="mono" style={{ padding:"10px 12px", color:"#4F8CFF" }}>{tasks.filter(t => t.member === m.name).length}</td>
+              <td className="mono" style={{ padding:"10px 12px", color:"#3ECF9A" }}>{tasks.filter(t => t.member === m.name && t.status === "Done").length}</td>
+              <td style={{ padding:"10px 12px", whiteSpace:"nowrap" }}>
+                {canManageMembers && <button className="btn" onClick={() => {
+                  setMemberForm({ name:m.name, email:m.email, mobile:m.mobile, teamId:m.teamId, role:m.role || "Member", group:m.group, joinedDate:m.joinedDate });
+                  setEditingMemberId(m.id); setMemberFormError(""); setMemberModalOpen(true);
+                }} style={{ background:"none", border:"none", color:"#8593A3", padding:4, marginRight:4, fontSize:12 }}>Edit</button>}
+                {canManageMembers && <button className="btn" onClick={() => setConfirmDeleteMemberId(m.id)}
+                  style={{ background:"none", border:"none", color:"#8593A3", padding:4, fontSize:12 }}>Delete</button>}
+              </td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>}
+    </div>
+
+    {modalOpen && <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, padding:16 }} onClick={() => setModalOpen(false)}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#121821", border:"1px solid #1F2733", borderRadius:10, width:"100%", maxWidth:480, padding:22, maxHeight:"88vh", overflowY:"auto" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <div className="disp" style={{ fontSize:16, fontWeight:700 }}>{editingId !== null ? "Edit Task" : "New Task"}</div>
+          <button className="btn" onClick={() => setModalOpen(false)} style={{ background:"none", border:"none", color:"#8593A3", fontSize:16 }}>×</button>
+        </div>
+        <Field label="Member">
+          <select value={form.member} onChange={e => setForm({...form, member:e.target.value})} style={inputStyle}>
+            <option value="">— Select member —</option>
+            {GROUPS.map(g => memberOptions.byGroup[g]?.length ? <optgroup key={g} label={g}>
+              {memberOptions.byGroup[g].map(m => <option key={m.id} value={m.name}>{m.name} ({m.teamId})</option>)}
+            </optgroup> : null)}
+            {memberOptions.legacy.length ? <optgroup label="Other">{memberOptions.legacy.map(n => <option key={n} value={n}>{n}</option>)}</optgroup> : null}
+          </select>
+        </Field>
+        <Field label="Meeting ID"><input value={form.meetingId} onChange={e => setForm({...form, meetingId:e.target.value})} placeholder="e.g. 010" style={inputStyle} /></Field>
+        <Field label="Task"><textarea value={form.task} onChange={e => setForm({...form, task:e.target.value})} placeholder="Describe the task" rows="2" style={{...inputStyle, resize:"vertical"}} /></Field>
+        <div style={{ display:"flex", gap:10 }}>
+          <Field label="Assigned Date" style={{flex:1}}><input type="date" value={form.assignedDate} onChange={e => setForm({...form, assignedDate:e.target.value})} style={inputStyle} /></Field>
+          <Field label="Deadline" style={{flex:1}}><input type="date" value={form.deadline} onChange={e => setForm({...form, deadline:e.target.value})} style={inputStyle} /></Field>
+        </div>
+        <div style={{ display:"flex", gap:10 }}>
+          <Field label="Status" style={{flex:1}}><select value={form.status} onChange={e => setForm({...form, status:e.target.value})} style={inputStyle}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></Field>
+          <Field label="Priority" style={{flex:1}}><select value={form.priority} onChange={e => setForm({...form, priority:e.target.value})} style={inputStyle}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></Field>
+        </div>
+        <Field label="Remarks"><textarea value={form.remarks} onChange={e => setForm({...form, remarks:e.target.value})} placeholder="Optional notes" rows="2" style={{...inputStyle, resize:"vertical"}} /></Field>
+        {formError && <div style={{ color:"#E85D5D", fontSize:12.5, marginBottom:10 }}>{formError}</div>}
+        <div style={{ display:"flex", gap:10, marginTop:6 }}>
+          <button className="btn" onClick={() => setModalOpen(false)} style={{flex:1, background:"transparent", border:"1px solid #1F2733", color:"#8593A3", borderRadius:6, padding:"10px 0", fontSize:13.5}}>Cancel</button>
+          <button className="btn" onClick={() => {
+            if (!form.member.trim() || !form.task.trim()) { setFormError("Member and Task are required."); return; }
+            saveTask(form);
+          }} style={{flex:1, background:"#4F8CFF", border:"none", color:"#08111F", borderRadius:6, padding:"10px 0", fontSize:13.5, fontWeight:600}}>
+            {editingId !== null ? "Save Changes" : "Add Task"}
+          </button>
+        </div>
+      </div>
+    </div>}
+
+    {confirmDeleteId !== null && <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, padding:16}} onClick={() => setConfirmDeleteId(null)}>
+      <div onClick={e => e.stopPropagation()} style={{background:"#121821", border:"1px solid #1F2733", borderRadius:10, width:"100%", maxWidth:360, padding:20}}>
+        <div style={{fontSize:14, marginBottom:16}}>Delete this task? This can't be undone.</div>
+        <div style={{display:"flex", gap:10}}>
+          <button className="btn" onClick={() => setConfirmDeleteId(null)} style={{flex:1, background:"transparent", border:"1px solid #1F2733", color:"#8593A3", borderRadius:6, padding:"9px 0", fontSize:13}}>Cancel</button>
+          <button className="btn" onClick={() => deleteTask(confirmDeleteId)} style={{flex:1, background:"#E85D5D", border:"none", color:"#2A0808", borderRadius:6, padding:"9px 0", fontSize:13, fontWeight:600}}>Delete</button>
+        </div>
+      </div>
+    </div>}
+
+    {memberModalOpen && <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, padding:16}} onClick={() => setMemberModalOpen(false)}>
+      <div onClick={e => e.stopPropagation()} style={{background:"#121821", border:"1px solid #1F2733", borderRadius:10, width:"100%", maxWidth:480, padding:22, maxHeight:"88vh", overflowY:"auto"}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16}}>
+          <div className="disp" style={{fontSize:16, fontWeight:700}}>{editingMemberId !== null ? "Edit Member" : "Add Member"}</div>
+          <button className="btn" onClick={() => setMemberModalOpen(false)} style={{background:"none", border:"none", color:"#8593A3", fontSize:16}}>×</button>
+        </div>
+        <Field label="Name"><input value={memberForm.name} onChange={e => setMemberForm({...memberForm, name:e.target.value})} placeholder="e.g. Shahrukh Khan" style={inputStyle} /></Field>
+        <Field label="Email"><input type="email" value={memberForm.email} onChange={e => setMemberForm({...memberForm, email:e.target.value})} placeholder="name@example.com" style={inputStyle} /></Field>
+        <Field label="Mobile"><input value={memberForm.mobile} onChange={e => setMemberForm({...memberForm, mobile:e.target.value})} placeholder="e.g. 01XXXXXXXXX" style={inputStyle} /></Field>
+        <div style={{display:"flex", gap:10}}>
+          <Field label="Team ID" style={{flex:1}}><input value={memberForm.teamId} onChange={e => setMemberForm({...memberForm, teamId:e.target.value})} placeholder="e.g. 26-13860-0605" style={inputStyle} /></Field>
+          <Field label="Group" style={{flex:1}}><select value={memberForm.group} onChange={e => setMemberForm({...memberForm, group:e.target.value})} style={inputStyle}>{GROUPS.map(g => <option key={g}>{g}</option>)}</select></Field>
+        </div>
+        <Field label="Role"><input value={memberForm.role} onChange={e => setMemberForm({...memberForm, role:e.target.value})} placeholder="e.g. RA, SPM, ASPM" style={inputStyle} /></Field>
+        <Field label="Joined Date"><input type="date" value={memberForm.joinedDate} onChange={e => setMemberForm({...memberForm, joinedDate:e.target.value})} style={inputStyle} /></Field>
+        {memberFormError && <div style={{color:"#E85D5D", fontSize:12.5, marginBottom:10}}>{memberFormError}</div>}
+        <div style={{display:"flex", gap:10, marginTop:6}}>
+          <button className="btn" onClick={() => setMemberModalOpen(false)} style={{flex:1, background:"transparent", border:"1px solid #1F2733", color:"#8593A3", borderRadius:6, padding:"10px 0", fontSize:13.5}}>Cancel</button>
+          <button className="btn" onClick={() => {
+            if (!memberForm.name.trim() || !memberForm.teamId.trim()) { setMemberFormError("Name and Team ID are required."); return; }
+            saveMember(memberForm);
+          }} style={{flex:1, background:"#4F8CFF", border:"none", color:"#08111F", borderRadius:6, padding:"10px 0", fontSize:13.5, fontWeight:600}}>
+            {editingMemberId !== null ? "Save Changes" : "Add Member"}
+          </button>
+        </div>
+      </div>
+    </div>}
+
+    {confirmDeleteMemberId !== null && <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, padding:16}} onClick={() => setConfirmDeleteMemberId(null)}>
+      <div onClick={e => e.stopPropagation()} style={{background:"#121821", border:"1px solid #1F2733", borderRadius:10, width:"100%", maxWidth:360, padding:20}}>
+        <div style={{fontSize:14, marginBottom:16}}>Remove this member? Existing tasks assigned to them will keep their name as text.</div>
+        <div style={{display:"flex", gap:10}}>
+          <button className="btn" onClick={() => setConfirmDeleteMemberId(null)} style={{flex:1, background:"transparent", border:"1px solid #1F2733", color:"#8593A3", borderRadius:6, padding:"9px 0", fontSize:13}}>Cancel</button>
+          <button className="btn" onClick={() => deleteMember(confirmDeleteMemberId)} style={{flex:1, background:"#E85D5D", border:"none", color:"#2A0808", borderRadius:6, padding:"9px 0", fontSize:13, fontWeight:600}}>Delete</button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
