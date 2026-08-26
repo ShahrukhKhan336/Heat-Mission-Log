@@ -7,6 +7,7 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
   * { box-sizing: border-box; }
@@ -26,6 +27,18 @@
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo } = React;
+
+const { createClient } = supabase;
+
+const SUPABASE_URL = "https://ljrdxacphmquwxllvayn.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_mFsZmj8cn6o3GRZfe2SObA_YEvFF4yS";
+
+const db = createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 
 const STATUSES = ["To Do", "In Progress", "Done"];
 const PRIORITIES = ["High", "Medium", "Low"];
@@ -151,58 +164,157 @@ function App() {
   const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
-    if (members && !authChecked) {
+    async function loadData() {
       try {
-        const savedId = sessionStorage.getItem("mission_log_session");
-        if (savedId) {
-          const m = members.find(mm => mm.teamId === savedId);
-          if (m) setCurrentUser(m);
+        // Load members
+        let { data: memberData, error: memberError } =
+          await db.from("members").select("*").order("id");
+  
+        if (memberError) throw memberError;
+  
+        // First-time setup: upload seed members
+        if (!memberData || memberData.length === 0) {
+          const rows = seedMembers.map(m => ({
+            id: m.id,
+            team_id: m.teamId,
+            name: m.name,
+            role: m.role,
+            group_name: m.group,
+            email: m.email || null,
+            mobile: m.mobile || null,
+            joined_date: m.joinedDate || null
+          }));
+  
+          const { error } = await db.from("members").insert(rows);
+          if (error) throw error;
+  
+          memberData = rows;
         }
-      } catch (e) {}
-      setAuthChecked(true);
+  
+        const loadedMembers = memberData.map(m => ({
+          id: m.id,
+          teamId: m.team_id,
+          name: m.name,
+          role: m.role,
+          group: m.group_name,
+          email: m.email || "",
+          mobile: m.mobile || "",
+          joinedDate: m.joined_date || ""
+        }));
+  
+        setMembers(loadedMembers);
+  
+  
+        // Load tasks
+        let { data: taskData, error: taskError } =
+          await db.from("tasks").select("*").order("id");
+  
+        if (taskError) throw taskError;
+  
+        // First-time setup: upload seed tasks
+        if (!taskData || taskData.length === 0) {
+          const rows = seedTasks.map(t => ({
+            id: t.id,
+            member: t.member,
+            meeting_id: t.meetingId,
+            task: t.task,
+            assigned_date: t.assignedDate || null,
+            deadline: t.deadline || null,
+            status: t.status,
+            priority: t.priority,
+            remarks: t.remarks || null
+          }));
+  
+          const { error } = await db.from("tasks").insert(rows);
+          if (error) throw error;
+  
+          taskData = rows;
+        }
+  
+        const loadedTasks = taskData.map(t => ({
+          id: t.id,
+          member: t.member,
+          meetingId: t.meeting_id,
+          task: t.task,
+          assignedDate: t.assigned_date || "",
+          deadline: t.deadline || "",
+          status: t.status,
+          priority: t.priority,
+          remarks: t.remarks || ""
+        }));
+  
+        setTasks(loadedTasks);
+  
+      } catch (error) {
+        console.error("Supabase loading error:", error);
+        alert("Could not connect to Supabase. Check the browser console.");
+        setTasks([]);
+        setMembers([]);
+      }
     }
-  }, [members, authChecked]);
-
-  function handleLogin() {
-    const idTrim = loginId.trim();
-    const m = members.find(mm => mm.teamId === idTrim);
-    if (!m) { setLoginError("Team ID not found. Ask your SPM/ASPM to add you as a member first."); return; }
-    const expected = m.group === "SPMT" ? "13860spmt." : m.teamId;
-    if (loginPassword !== expected) { setLoginError("Incorrect password."); return; }
-    setCurrentUser(m);
-    setLoginError("");
-    try { sessionStorage.setItem("mission_log_session", m.teamId); } catch (e) {}
-  }
-
-  function handleLogout() {
-    setCurrentUser(null);
-    setLoginId(""); setLoginPassword(""); setLoginError("");
-    try { sessionStorage.removeItem("mission_log_session"); } catch (e) {}
-  }
-
-  const canEdit = !!(currentUser && (currentUser.group === "SPMT" || currentUser.group === "Faculty Advisors"));
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("mission_log_tasks");
-      if (stored) setTasks(JSON.parse(stored));
-      else { setTasks(seedTasks); localStorage.setItem("mission_log_tasks", JSON.stringify(seedTasks)); }
-    } catch (e) { setTasks(seedTasks); }
-    try {
-      const storedM = localStorage.getItem("mission_log_members");
-      if (storedM) setMembers(JSON.parse(storedM));
-      else { setMembers(seedMembers); localStorage.setItem("mission_log_members", JSON.stringify(seedMembers)); }
-    } catch (e) { setMembers(seedMembers); }
+  
+    loadData();
   }, []);
 
-  function persist(next) {
+  async function persist(next) {
     setTasks(next);
-    try { localStorage.setItem("mission_log_tasks", JSON.stringify(next)); } catch (e) {}
+  
+    try {
+      const rows = next.map(t => ({
+        id: t.id,
+        member: t.member,
+        meeting_id: t.meetingId,
+        task: t.task,
+        assigned_date: t.assignedDate || null,
+        deadline: t.deadline || null,
+        status: t.status,
+        priority: t.priority,
+        remarks: t.remarks || null
+      }));
+  
+      const { error } = await db
+        .from("tasks")
+        .upsert(rows);
+  
+      if (error) throw error;
+  
+    } catch (error) {
+      console.error("Task save error:", error);
+      alert("Could not save task to Supabase.");
+    }
   }
 
-  function persistMembers(next) {
+  async function persistMembers(next) {
     setMembers(next);
-    try { localStorage.setItem("mission_log_members", JSON.stringify(next)); } catch (e) {}
+  
+    try {
+      const rows = next.map(m => ({
+        id: m.id,
+        team_id: m.teamId,
+        name: m.name,
+        role: m.role,
+        group_name: m.group,
+        email: m.email || null,
+        mobile: m.mobile || null,
+        joined_date: m.joinedDate || null
+      }));
+  
+      const { error: deleteError } =
+        await db.from("members").delete().neq("id", "");
+  
+      if (deleteError) throw deleteError;
+  
+      if (rows.length > 0) {
+        const { error: insertError } =
+          await db.from("members").insert(rows);
+  
+        if (insertError) throw insertError;
+      }
+  
+    } catch (error) {
+      console.error("Member save error:", error);
+      alert("Could not save member to Supabase.");
+    }
   }
 
   function openAddMember() { setMemberForm(emptyMemberForm); setEditingMemberId(null); setMemberFormError(""); setMemberModalOpen(true); }
