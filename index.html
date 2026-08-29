@@ -9,16 +9,17 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- Tomorrow: uncomment the Supabase CDN line in supabase.js instructions -->
+  <!-- Load order matters: supabase.js creates `db`, app.js uses it -->
   <script src="supabase.js"></script>
-
-  <!-- App -->
   <script src="app.js"></script>
 </body>
 </html>
