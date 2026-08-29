@@ -1,9 +1,5 @@
 // ── supabase.js ───────────────────────────────────────────────────────────
-// Supabase client — loaded before app.js
-
 const SUPABASE_URL = "https://ljrdxacphmquwxllvayn.supabase.co";
-const SUPABASE_KEY = "sb_publishable_mFsZmj8cn6o3GRZfe2SObA_YEvFF4yS";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqcmR4YWNwaG1xdXd4bGx2YXluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjY3MDUsImV4cCI6MjEwMzM0MjcwNX0.U199rwR_6G-6xuh5IvjA6_9cO-y6hx1ZzY-Mn2gN9KI";
 
-// `db` is used by app.js for all data operations once Supabase is wired in.
-// For now the app still uses localStorage — app.js update is the next step.
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
