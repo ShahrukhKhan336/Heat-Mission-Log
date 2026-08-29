@@ -3,8 +3,6 @@ const {
   useEffect,
   useMemo
 } = React;
-
-// ── Constants ─────────────────────────────────────────────────────────────
 const STATUSES = ["To Do", "In Progress", "Done"];
 const PRIORITIES = ["High", "Medium", "Low"];
 const GROUPS = ["SPMT", "Faculty Advisors", "RA", "Other Officer", "Staff", "Student"];
@@ -19,148 +17,41 @@ const PRIORITY_COLOR = {
   Low: "#5B6675"
 };
 
-// ── Seed members ──────────────────────────────────────────────────────────
-const SEED_MEMBERS = [{
-  teamId: "25-13860-0101",
-  name: "Dr. Saifur Rahman Bakaul",
-  role: "SPM",
-  group: "SPMT"
-}, {
-  teamId: "25-13860-0102",
-  name: "Dr. Saiaf Bin Rayhan",
-  role: "ASPM",
-  group: "SPMT"
-}, {
-  teamId: "25-13860-0103",
-  name: "Shahrukh Khan",
-  role: "Member",
-  group: "SPMT"
-}, {
-  teamId: "25-13860-0104",
-  name: "Dr. Tawfique",
-  role: "Member",
-  group: "SPMT"
-}, {
-  teamId: "26-13860-0201",
-  name: "Md. Toufiq Islam Noor",
-  role: "Faculty Advisor",
-  group: "Faculty Advisors"
-}, {
-  teamId: "26-13860-0202",
-  name: "Mushfiq Al Arafah",
-  role: "Faculty Advisor",
-  group: "Faculty Advisors"
-}, {
-  teamId: "26-13860-0301",
-  name: "Md. Samiullah Prodhan",
-  role: "RA",
-  group: "RA"
-}, {
-  teamId: "26-13860-0302",
-  name: "Mohtasim al Jamee",
-  role: "RA",
-  group: "RA"
-}, {
-  teamId: "26-13860-0303",
-  name: "Kawser Miah",
-  role: "RA",
-  group: "RA"
-}, {
-  teamId: "26-13860-0304",
-  name: "Abdul Aziz Efty",
-  role: "RA",
-  group: "RA"
-}, {
-  teamId: "26-13860-0401",
-  name: "Finance Officer",
-  role: "Other Officer",
-  group: "Other Officer"
-}, {
-  teamId: "26-13860-0402",
-  name: "Procurement Officer",
-  role: "Other Officer",
-  group: "Other Officer"
-}, {
-  teamId: "26-13860-0403",
-  name: "Project Officer",
-  role: "Other Officer",
-  group: "Other Officer"
-}, {
-  teamId: "26-13860-0501",
-  name: "Cleaner/MLSS/Peon",
-  role: "Staff",
-  group: "Staff"
-}, {
-  teamId: "26-13860-0601",
-  name: "Mahruf Ahmed",
-  role: "Student",
-  group: "Student"
-}, {
-  teamId: "26-13860-0602",
-  name: "Ishtiak Risat",
-  role: "Student",
-  group: "Student"
-}, {
-  teamId: "26-13860-0603",
-  name: "Tasdid Ahmed",
-  role: "Student",
-  group: "Student"
-}, {
-  teamId: "26-13860-0604",
-  name: "Borhan Uddin",
-  role: "Student",
-  group: "Student"
-}].map((m, i) => ({
-  id: "M" + String(i + 1).padStart(3, "0"),
-  email: "",
-  mobile: "",
-  joinedDate: "",
-  ...m
-}));
-
-// ── Seed tasks ────────────────────────────────────────────────────────────
-const SEED_TASKS = [["Dr. Saiaf Bin Rayhan", "007", "Prepare notes for inclusion of Toufiq Noor Islam and Mushfique Al Arafa as Faculty Advisors", "To Do", ""], ["Dr. Saiaf Bin Rayhan", "007", "Modify the Project Officer recruitment notice", "To Do", ""], ["Dr. Saiaf Bin Rayhan", "007", "Arrange Project Officer interview once the SPM issue is resolved", "To Do", ""], ["Dr. Saiaf Bin Rayhan", "007", "Follow up on the SPM issue together with Registrar's Office", "In Progress", "Meeting with PD on 27 Aug 2026"], ["Dr. Saiaf Bin Rayhan", "007", "Take control of the SPM email for recruitment purposes", "In Progress", "Not required, received all CVs"], ["Dr. Saiaf Bin Rayhan", "007", "Send notes regarding SEM relocation from Dhaka to Lalmonirhat", "To Do", ""], ["Dr. Saiaf Bin Rayhan", "007", "Prepare notes for A/O Somrat, R/A, and recruitments", "In Progress", "R/A recruitment is done"], ["Shahrukh Khan", "007", "Work on documentation system, including NAS and remote access system", "To Do", ""], ["Mushfiq Al Arafah", "007", "Work on documentation system, including NAS and remote access system", "To Do", ""], ["SPM – Dr. Saifur Rahman Bakaul", "008", "Participate in/oversee RA recruitment and selection", "Done", ""], ["ASPM – Dr. Saiaf Bin Rayhan", "008", "Participate in/oversee RA recruitment and selection", "Done", ""], ["Toufiq Noor Islam", "006", "Audit Report on Design", "Done", "Yet to brief"], ["Mushfiq Al Arafah", "006", "Audit Report on Design", "Done", "Yet to brief"], ["Shahrukh Khan", "009", "Brief RAs regarding the 3-monthly performance evaluation report", "Done", ""], ["Toufiq Noor Islam", "009", "Brief RAs on design team workflow", "Done", ""], ["Mushfiq Al Arafah", "009", "Brief RAs on design team workflow", "Done", ""], ["Faculty Advisors", "006", "Brief the design doubts to RAs", "To Do", ""], ["ASPM – Dr. Saiaf Bin Rayhan", "009", "Assign RAs the task of preparing the inventory list", "Done", ""], ["Md. Samiullah Prodhan", "009", "Modification of the existing design based on audit report", "To Do", ""], ["Md. Samiullah Prodhan", "009", "Provide 2D view of all components within 2 weeks", "To Do", ""], ["Mohtasim al Jamee", "009", "Observe the design and plan, provide the Avionics Architecture", "To Do", ""], ["Mohtasim al Jamee", "009", "Provide the list of Avionics equipment required for the proposed design within 2 weeks", "To Do", ""], ["Kawser Miah", "009", "Assist the team to list inventory and procurement for Manufacturing equipment", "To Do", ""], ["Abdul Aziz Efty", "009", "Provide the plan for small drone production for control integration", "To Do", ""], ["Abdul Aziz Efty", "009", "Assist the team with listing inventory and procurement", "To Do", ""], ["All members", "009", "Set a plan for designing the assembly platform and place requirements", "To Do", ""], ["All members", "009", "Update procurement plan with estimated budget within 2 weeks for APP", "To Do", ""]].map((r, i) => ({
-  id: "T" + String(i + 1).padStart(3, "0"),
-  taskCode: "T" + String(i + 1).padStart(3, "0"),
-  member: r[0],
-  meetingId: r[1],
-  task: r[2],
-  assignedDate: "",
-  deadline: "",
-  status: r[3],
-  priority: "Medium",
-  remarks: r[4]
-}));
-
-// ── localStorage helpers ──────────────────────────────────────────────────
-const LS_TASKS = "mission_log_tasks_v2";
-const LS_MEMBERS = "mission_log_members_v2";
-const LS_SESSION = "mission_log_session_v2";
-function loadLS(key, seed) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
-    localStorage.setItem(key, JSON.stringify(seed));
-    return seed;
-  } catch {
-    return seed;
-  }
+// DB row → JS object (handles column name differences)
+function rowToMember(r) {
+  return {
+    id: r.id,
+    teamId: r.team_id,
+    name: r.name,
+    role: r.role || '',
+    group: r.group_name,
+    email: r.email || '',
+    mobile: r.mobile || '',
+    joinedDate: r.joined_date || ''
+  };
 }
-function saveLS(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch {}
+function rowToTask(r) {
+  return {
+    id: r.id,
+    taskCode: r.task_code || '',
+    member: r.member,
+    meetingId: r.meeting_id || '',
+    task: r.task,
+    assignedDate: r.assigned_date || '',
+    deadline: r.deadline || '',
+    status: r.status,
+    priority: r.priority,
+    remarks: r.remarks || ''
+  };
 }
-
-// ── Utility functions ─────────────────────────────────────────────────────
 function isOverdue(t) {
   if (!t.deadline || t.status === "Done") return false;
-  const d = new Date(t.deadline);
+  const d = new Date(t.deadline + "T00:00:00");
   return !isNaN(d) && d < new Date();
 }
 function fmtDate(s) {
   if (!s) return "—";
-  const d = new Date(s);
+  const d = new Date(s + "T00:00:00");
   if (isNaN(d)) return s;
   return d.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -168,8 +59,6 @@ function fmtDate(s) {
     year: "numeric"
   });
 }
-
-// ── Shared UI primitives ──────────────────────────────────────────────────
 const inputStyle = {
   width: "100%",
   background: "#0A0E14",
@@ -220,31 +109,27 @@ function FilterSelect({
   }, o === "All" ? "All" : labelPrefix + o)));
 }
 
-// ── Login screen ──────────────────────────────────────────────────────────
-function LoginScreen({
-  members,
-  onLogin
-}) {
-  const [teamId, setTeamId] = useState("");
+// ── Login screen (email + password) ──────────────────────────────────────
+function LoginScreen() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  function attempt() {
-    const id = teamId.trim();
-    if (!id || !password) {
-      setError("Please enter your Team ID and password.");
+  const [loading, setLoading] = useState(false);
+  async function attempt() {
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
       return;
     }
-    const m = members.find(mm => mm.teamId === id);
-    if (!m) {
-      setError("Team ID not found. Ask your SPM/ASPM to add you first.");
-      return;
-    }
-    const expected = m.group === "SPMT" ? "13860spmt." : id;
-    if (password !== expected) {
-      setError("Incorrect password.");
-      return;
-    }
-    onLogin(m);
+    setLoading(true);
+    setError("");
+    const {
+      error: e
+    } = await db.auth.signInWithPassword({
+      email: email.trim(),
+      password
+    });
+    setLoading(false);
+    if (e) setError(e.message);
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -284,13 +169,14 @@ function LoginScreen({
       color: "#8593A3",
       marginBottom: 20
     }
-  }, "Sign in with your Team ID to continue."), /*#__PURE__*/React.createElement(Field, {
-    label: "Team ID"
+  }, "Sign in with your email to continue."), /*#__PURE__*/React.createElement(Field, {
+    label: "Email"
   }, /*#__PURE__*/React.createElement("input", {
-    value: teamId,
-    onChange: e => setTeamId(e.target.value),
+    type: "email",
+    value: email,
+    onChange: e => setEmail(e.target.value),
     onKeyDown: e => e.key === "Enter" && attempt(),
-    placeholder: "e.g. 25-13860-0101",
+    placeholder: "your@email.com",
     style: inputStyle
   })), /*#__PURE__*/React.createElement(Field, {
     label: "Password"
@@ -310,6 +196,7 @@ function LoginScreen({
   }, error), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: attempt,
+    disabled: loading,
     style: {
       width: "100%",
       background: "#4F8CFF",
@@ -320,52 +207,167 @@ function LoginScreen({
       fontSize: 13.5,
       fontWeight: 600
     }
-  }, "Sign In"), /*#__PURE__*/React.createElement("div", {
+  }, loading ? "Signing in…" : "Sign In"), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 16,
-      background: "#0A0E14",
-      border: "1px solid #1F2733",
-      borderRadius: 6,
-      padding: "10px 12px",
+      marginTop: 14,
       fontSize: 11.5,
-      color: "#5B6675",
-      lineHeight: 1.7
+      color: "#5B6675"
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }, "No account? Ask your SPM or ASPM to invite you.")));
+}
+
+// ── Claim screen (first login, not yet linked to a member row) ────────────
+function ClaimScreen({
+  authEmail,
+  onClaimed
+}) {
+  const [teamId, setTeamId] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  async function claim() {
+    const id = teamId.trim();
+    if (!id) {
+      setError("Enter your Team ID.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    const {
+      error: e
+    } = await db.rpc("claim_membership", {
+      p_team_id: id
+    });
+    setLoading(false);
+    if (e) {
+      setError(e.message);
+      return;
+    }
+    setDone(true);
+    setTimeout(onClaimed, 800);
+  }
+  return /*#__PURE__*/React.createElement("div", {
     style: {
-      color: "#8593A3"
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16
     }
-  }, "SPMT password:"), " ", /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 10,
+      width: "100%",
+      maxWidth: 400,
+      padding: 26
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     className: "mono",
+    style: {
+      fontSize: 11,
+      letterSpacing: 2,
+      color: "#4F8CFF",
+      marginBottom: 6
+    }
+  }, "TEAM OPS · TASK TRACKER"), /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 22,
+      fontWeight: 700,
+      marginBottom: 8
+    }
+  }, "Link your account"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#8593A3",
+      marginBottom: 4
+    }
+  }, "Signed in as ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: "#E8EDF2"
     }
-  }, "13860spmt."), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+  }, authEmail)), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: "#8593A3"
+      fontSize: 12.5,
+      color: "#8593A3",
+      marginBottom: 20
     }
-  }, "All others:"), " your Team ID is your password.")));
+  }, "Enter your pre-assigned Team ID to link this account to your member profile."), /*#__PURE__*/React.createElement(Field, {
+    label: "Team ID"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: teamId,
+    onChange: e => setTeamId(e.target.value),
+    onKeyDown: e => e.key === "Enter" && claim(),
+    placeholder: "e.g. 26-13860-0301",
+    style: inputStyle
+  })), error && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#E85D5D",
+      fontSize: 12.5,
+      marginBottom: 10
+    }
+  }, error), done && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#3ECF9A",
+      fontSize: 12.5,
+      marginBottom: 10
+    }
+  }, "Linked! Loading your profile…"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: claim,
+    disabled: loading || done,
+    style: {
+      width: "100%",
+      background: "#4F8CFF",
+      border: "none",
+      color: "#08111F",
+      borderRadius: 6,
+      padding: "10px 0",
+      fontSize: 13.5,
+      fontWeight: 600
+    }
+  }, loading ? "Linking…" : "Link Account"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
+      fontSize: 11.5,
+      color: "#5B6675",
+      lineHeight: 1.6
+    }
+  }, "SPMT accounts are linked by the administrator. If you are SPMT, contact Dr. Saiaf Bin Rayhan."), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => db.auth.signOut(),
+    style: {
+      marginTop: 10,
+      background: "none",
+      border: "none",
+      color: "#5B6675",
+      fontSize: 12,
+      padding: 0
+    }
+  }, "Sign out")));
 }
 
 // ── Main app ──────────────────────────────────────────────────────────────
 function App() {
-  const [tasks, setTasksRaw] = useState(null);
-  const [members, setMembersRaw] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [ready, setReady] = useState(false);
-
-  // Filters & views
+  const [authReady, setAuthReady] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
+  const [currentMember, setCurrentMember] = useState(null);
+  const [memberChecked, setMemberChecked] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState("");
   const [view, setView] = useState("table");
   const [search, setSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState("All");
   const [meetingFilter, setMeetingFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
-
-  // Task modal
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [taskForm, setTaskForm] = useState({
     member: "",
     meetingId: "",
     task: "",
@@ -375,10 +377,9 @@ function App() {
     priority: "Medium",
     remarks: ""
   });
-  const [formError, setFormError] = useState("");
+  const [taskFormError, setTaskFormError] = useState("");
+  const [taskSaving, setTaskSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-
-  // Member modal
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [memberForm, setMemberForm] = useState({
@@ -391,185 +392,295 @@ function App() {
     joinedDate: ""
   });
   const [memberFormError, setMemberFormError] = useState("");
+  const [memberSaving, setMemberSaving] = useState(false);
   const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
 
-  // ── Load from localStorage on mount ──
+  // ── Auth listener ─────────────────────────────────────────────────────
   useEffect(() => {
-    const loadedMembers = loadLS(LS_MEMBERS, SEED_MEMBERS);
-    const loadedTasks = loadLS(LS_TASKS, SEED_TASKS);
-    setMembersRaw(loadedMembers);
-    setTasksRaw(loadedTasks);
-    try {
-      const savedId = sessionStorage.getItem(LS_SESSION);
-      if (savedId) {
-        const m = loadedMembers.find(mm => mm.teamId === savedId);
-        if (m) setCurrentUser(m);
+    db.auth.getSession().then(({
+      data: {
+        session
       }
-    } catch {}
-    setReady(true);
+    }) => {
+      setAuthUser(session?.user ?? null);
+      setAuthReady(true);
+    });
+    const {
+      data: listener
+    } = db.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user ?? null);
+      setMemberChecked(false);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  // ── Persisting wrappers ──
-  function setTasks(fn) {
-    setTasksRaw(prev => {
-      const next = typeof fn === "function" ? fn(prev) : fn;
-      saveLS(LS_TASKS, next);
-      return next;
-    });
-  }
-  function setMembers(fn) {
-    setMembersRaw(prev => {
-      const next = typeof fn === "function" ? fn(prev) : fn;
-      saveLS(LS_MEMBERS, next);
-      return next;
-    });
-  }
-
-  // ── Auth ──
-  function handleLogin(member) {
-    setCurrentUser(member);
-    try {
-      sessionStorage.setItem(LS_SESSION, member.teamId);
-    } catch {}
-  }
-  function handleLogout() {
-    setCurrentUser(null);
-    try {
-      sessionStorage.removeItem(LS_SESSION);
-    } catch {}
-  }
-
-  // ── Permissions ──
-  const canEditTasks = !!currentUser && (currentUser.group === "SPMT" || currentUser.group === "Faculty Advisors");
-  const canManageMembers = !!currentUser && currentUser.group === "SPMT";
-
-  // ── Task operations ──
-  function nextTaskCode() {
-    const nums = (tasks || []).map(t => parseInt(String(t.taskCode || t.id || "").replace(/^T/i, ""), 10)).filter(Number.isFinite);
-    const n = nums.length ? Math.max(...nums) + 1 : 1;
-    return "T" + String(n).padStart(3, "0");
-  }
-  function saveTask(formValue) {
-    const cleaned = {
-      ...formValue,
-      member: formValue.member.trim(),
-      task: formValue.task.trim(),
-      remarks: (formValue.remarks || "").trim()
-    };
-    if (editingId !== null) {
-      setTasks(prev => prev.map(t => t.id === editingId ? {
-        ...t,
-        ...cleaned
-      } : t));
-    } else {
-      const code = nextTaskCode();
-      setTasks(prev => [...prev, {
-        id: code,
-        taskCode: code,
-        ...cleaned
-      }]);
+  // ── Load member profile when auth user changes ────────────────────────
+  useEffect(() => {
+    if (!authUser) {
+      setCurrentMember(null);
+      setMemberChecked(true);
+      return;
     }
-    setModalOpen(false);
+    setMemberChecked(false);
+    db.from("members").select("*").eq("auth_user_id", authUser.id).maybeSingle().then(({
+      data
+    }) => {
+      setCurrentMember(data ? rowToMember(data) : null);
+      setMemberChecked(true);
+    });
+  }, [authUser]);
+
+  // ── Load all data once member is confirmed ────────────────────────────
+  useEffect(() => {
+    if (currentMember) loadAllData();
+  }, [currentMember]);
+  async function loadAllData() {
+    setDataLoading(true);
+    setDataError("");
+    const [tr, mr] = await Promise.all([db.from("tasks").select("*").order("id"), db.from("members").select("*").order("group_name").order("name")]);
+    if (tr.error || mr.error) {
+      setDataError("Failed to load data. Please refresh the page.");
+    } else {
+      setTasks(tr.data.map(rowToTask));
+      setMembers(mr.data.map(rowToMember));
+    }
+    setDataLoading(false);
   }
-  function deleteTask(id) {
-    setTasks(prev => prev.filter(t => t.id !== id));
-    setConfirmDeleteId(null);
+  async function reloadTasks() {
+    const {
+      data,
+      error
+    } = await db.from("tasks").select("*").order("id");
+    if (!error) setTasks(data.map(rowToTask));
   }
-  function updateTaskStatus(id, status) {
-    setTasks(prev => prev.map(t => t.id === id ? {
+  async function reloadMembers() {
+    const {
+      data,
+      error
+    } = await db.from("members").select("*").order("group_name").order("name");
+    if (!error) setMembers(data.map(rowToMember));
+  }
+  const canEditTasks = !!currentMember && (currentMember.group === "SPMT" || currentMember.group === "Faculty Advisors");
+  const canManageMembers = !!currentMember && currentMember.group === "SPMT";
+
+  // ── Task operations ───────────────────────────────────────────────────
+  async function nextTaskCode() {
+    const {
+      data
+    } = await db.from("tasks").select("task_code").order("id", {
+      ascending: false
+    }).limit(1);
+    if (!data || !data.length) return "T001";
+    const n = parseInt((data[0].task_code || "").replace(/^T/i, ""), 10);
+    return "T" + String((isNaN(n) ? 0 : n) + 1).padStart(3, "0");
+  }
+  async function saveTask(form) {
+    setTaskSaving(true);
+    setTaskFormError("");
+    try {
+      const payload = {
+        member: form.member.trim(),
+        meeting_id: form.meetingId,
+        task: form.task.trim(),
+        assigned_date: form.assignedDate || null,
+        deadline: form.deadline || null,
+        status: form.status,
+        priority: form.priority,
+        remarks: (form.remarks || "").trim()
+      };
+      let error;
+      if (editingTaskId !== null) {
+        ({
+          error
+        } = await db.from("tasks").update(payload).eq("id", editingTaskId));
+      } else {
+        payload.task_code = await nextTaskCode();
+        ({
+          error
+        } = await db.from("tasks").insert(payload));
+      }
+      if (error) throw error;
+      setModalOpen(false);
+      await reloadTasks();
+    } catch (err) {
+      setTaskFormError(err.message || "Failed to save.");
+    }
+    setTaskSaving(false);
+  }
+  async function deleteTask(id) {
+    const {
+      error
+    } = await db.from("tasks").delete().eq("id", id);
+    if (!error) {
+      setConfirmDeleteId(null);
+      await reloadTasks();
+    }
+  }
+  async function updateTaskStatus(id, status) {
+    const {
+      error
+    } = await db.from("tasks").update({
+      status
+    }).eq("id", id);
+    if (!error) setTasks(prev => prev.map(t => t.id === id ? {
       ...t,
       status
     } : t));
   }
-  function updateTaskPriority(id, priority) {
+  async function updateTaskPriority(id, priority) {
     if (!canEditTasks) return;
-    setTasks(prev => prev.map(t => t.id === id ? {
+    const {
+      error
+    } = await db.from("tasks").update({
+      priority
+    }).eq("id", id);
+    if (!error) setTasks(prev => prev.map(t => t.id === id ? {
       ...t,
       priority
     } : t));
   }
 
-  // ── Member operations ──
-  function saveMember(formValue) {
-    const cleaned = {
-      ...formValue,
-      name: formValue.name.trim(),
-      teamId: formValue.teamId.trim(),
-      role: (formValue.role || "").trim(),
-      email: (formValue.email || "").trim(),
-      mobile: (formValue.mobile || "").trim()
-    };
-    if (editingMemberId !== null) {
-      setMembers(prev => prev.map(m => m.id === editingMemberId ? {
-        ...m,
-        ...cleaned
-      } : m));
-    } else {
-      const id = "M" + String(Date.now()).slice(-6);
-      setMembers(prev => [...prev, {
-        id,
-        ...cleaned
-      }]);
+  // ── Member operations ─────────────────────────────────────────────────
+  async function saveMember(form) {
+    setMemberSaving(true);
+    setMemberFormError("");
+    try {
+      const payload = {
+        name: form.name.trim(),
+        email: (form.email || "").trim(),
+        mobile: (form.mobile || "").trim(),
+        team_id: form.teamId.trim(),
+        role: (form.role || "").trim(),
+        group_name: form.group,
+        joined_date: form.joinedDate || null
+      };
+      let error;
+      if (editingMemberId !== null) {
+        ({
+          error
+        } = await db.from("members").update(payload).eq("id", editingMemberId));
+      } else {
+        ({
+          error
+        } = await db.from("members").insert(payload));
+      }
+      if (error) throw error;
+      setMemberModalOpen(false);
+      await reloadMembers();
+    } catch (err) {
+      setMemberFormError(err.message || "Failed to save.");
     }
-    setMemberModalOpen(false);
+    setMemberSaving(false);
   }
-  function deleteMember(id) {
-    setMembers(prev => prev.filter(m => m.id !== id));
-    setConfirmDeleteMemberId(null);
+  async function deleteMember(id) {
+    const {
+      error
+    } = await db.from("members").delete().eq("id", id);
+    if (!error) {
+      setConfirmDeleteMemberId(null);
+      await reloadMembers();
+    }
   }
 
-  // ── Derived data ──
-  const memberNames = useMemo(() => Array.from(new Set((tasks || []).map(t => t.member).filter(Boolean))).sort(), [tasks]);
-  const meetings = useMemo(() => Array.from(new Set((tasks || []).map(t => t.meetingId).filter(Boolean))).sort(), [tasks]);
-  const filtered = useMemo(() => (tasks || []).filter(t => {
+  // ── Derived data ──────────────────────────────────────────────────────
+  const memberNames = useMemo(() => Array.from(new Set(tasks.map(t => t.member).filter(Boolean))).sort(), [tasks]);
+  const meetings = useMemo(() => Array.from(new Set(tasks.map(t => t.meetingId).filter(Boolean))).sort(), [tasks]);
+  const filtered = useMemo(() => tasks.filter(t => {
     if (memberFilter !== "All" && t.member !== memberFilter) return false;
     if (meetingFilter !== "All" && t.meetingId !== meetingFilter) return false;
     if (statusFilter !== "All" && t.status !== statusFilter) return false;
     if (priorityFilter !== "All" && t.priority !== priorityFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      if (!(t.task + " " + t.member + " " + (t.remarks || "") + " " + t.meetingId).toLowerCase().includes(q)) return false;
+      if (!(t.task + " " + t.member + " " + t.remarks + " " + t.meetingId).toLowerCase().includes(q)) return false;
     }
     return true;
   }), [tasks, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
   const stats = useMemo(() => ({
-    total: (tasks || []).length,
-    todo: (tasks || []).filter(t => t.status === "To Do").length,
-    inProgress: (tasks || []).filter(t => t.status === "In Progress").length,
-    done: (tasks || []).filter(t => t.status === "Done").length,
-    overdue: (tasks || []).filter(isOverdue).length
+    total: tasks.length,
+    todo: tasks.filter(t => t.status === "To Do").length,
+    inProgress: tasks.filter(t => t.status === "In Progress").length,
+    done: tasks.filter(t => t.status === "Done").length,
+    overdue: tasks.filter(isOverdue).length
   }), [tasks]);
   const memberOptions = useMemo(() => {
     const byGroup = {};
-    (members || []).forEach(m => {
+    members.forEach(m => {
       (byGroup[m.group] = byGroup[m.group] || []).push(m);
     });
-    const known = new Set((members || []).map(m => m.name));
-    const legacy = Array.from(new Set((tasks || []).map(t => t.member))).filter(n => n && !known.has(n));
+    const known = new Set(members.map(m => m.name));
+    const legacy = Array.from(new Set(tasks.map(t => t.member))).filter(n => n && !known.has(n));
     return {
       byGroup,
       legacy
     };
   }, [members, tasks]);
 
-  // ── Guards ──
-  if (!ready || tasks === null || members === null) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#8593A3"
+  // ── Guards ────────────────────────────────────────────────────────────
+  if (!authReady) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#8593A3"
+    }
+  }, "Loading…");
+  if (!authUser) return /*#__PURE__*/React.createElement(LoginScreen, null);
+  if (!memberChecked) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#8593A3"
+    }
+  }, "Checking profile…");
+  if (!currentMember) {
+    return /*#__PURE__*/React.createElement(ClaimScreen, {
+      authEmail: authUser.email,
+      onClaimed: () => {
+        db.from("members").select("*").eq("auth_user_id", authUser.id).maybeSingle().then(({
+          data
+        }) => setCurrentMember(data ? rowToMember(data) : null));
       }
-    }, "Loading Mission Log…");
+    });
   }
-  if (!currentUser) return /*#__PURE__*/React.createElement(LoginScreen, {
-    members: members,
-    onLogin: handleLogin
-  });
+  if (dataLoading) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#8593A3"
+    }
+  }, "Loading tasks…");
+  if (dataError) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "column",
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#E85D5D"
+    }
+  }, dataError), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: loadAllData,
+    style: {
+      background: "#4F8CFF",
+      border: "none",
+      color: "#08111F",
+      borderRadius: 6,
+      padding: "8px 16px"
+    }
+  }, "Retry"));
 
-  // ── Main UI ──
+  // ── Main UI ───────────────────────────────────────────────────────────
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh"
@@ -619,12 +730,12 @@ function App() {
     style: {
       fontSize: 12.5
     }
-  }, currentUser.name), /*#__PURE__*/React.createElement("div", {
+  }, currentMember.name), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: canEditTasks ? "#3ECF9A" : "#8593A3"
     }
-  }, canEditTasks ? "Editor · " + currentUser.group : "Viewer · " + currentUser.group)), canManageMembers && /*#__PURE__*/React.createElement("button", {
+  }, canEditTasks ? "Editor" : "Viewer", " · ", currentMember.group)), canManageMembers && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setMemberForm({
@@ -652,7 +763,7 @@ function App() {
   }, "+ Add Member"), canEditTasks && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
-      setForm({
+      setTaskForm({
         member: "",
         meetingId: "",
         task: "",
@@ -662,8 +773,8 @@ function App() {
         priority: "Medium",
         remarks: ""
       });
-      setEditingId(null);
-      setFormError("");
+      setEditingTaskId(null);
+      setTaskFormError("");
       setModalOpen(true);
     },
     style: {
@@ -677,7 +788,7 @@ function App() {
     }
   }, "+ New Task"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
-    onClick: handleLogout,
+    onClick: () => db.auth.signOut(),
     style: {
       background: "transparent",
       color: "#8593A3",
@@ -800,7 +911,7 @@ function App() {
     }
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(t => {
     const overdue = isOverdue(t);
-    const canChangeStatus = canEditTasks || currentUser && t.member === currentUser.name;
+    const canChangeStatus = canEditTasks || currentMember && t.member === currentMember.name;
     return /*#__PURE__*/React.createElement("tr", {
       key: t.id,
       className: "rowhover",
@@ -814,7 +925,7 @@ function App() {
         color: "#5B6675",
         whiteSpace: "nowrap"
       }
-    }, t.taskCode || t.id), /*#__PURE__*/React.createElement("td", {
+    }, t.taskCode), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 12px",
         whiteSpace: "nowrap"
@@ -899,10 +1010,10 @@ function App() {
         padding: "10px 12px",
         whiteSpace: "nowrap"
       }
-    }, canEditTasks && /*#__PURE__*/React.createElement("button", {
+    }, canEditTasks && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
       className: "btn",
       onClick: () => {
-        setForm({
+        setTaskForm({
           member: t.member,
           meetingId: t.meetingId,
           task: t.task,
@@ -912,8 +1023,8 @@ function App() {
           priority: t.priority,
           remarks: t.remarks || ""
         });
-        setEditingId(t.id);
-        setFormError("");
+        setEditingTaskId(t.id);
+        setTaskFormError("");
         setModalOpen(true);
       },
       style: {
@@ -924,7 +1035,7 @@ function App() {
         marginRight: 4,
         fontSize: 12
       }
-    }, "Edit"), canEditTasks && /*#__PURE__*/React.createElement("button", {
+    }, "Edit"), /*#__PURE__*/React.createElement("button", {
       className: "btn",
       onClick: () => setConfirmDeleteId(t.id),
       style: {
@@ -934,7 +1045,7 @@ function App() {
         padding: 4,
         fontSize: 12
       }
-    }, "Delete")));
+    }, "Delete"))));
   }))), filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
@@ -987,7 +1098,7 @@ function App() {
       key: t.id,
       className: canEditTasks ? "btn" : "",
       onClick: canEditTasks ? () => {
-        setForm({
+        setTaskForm({
           member: t.member,
           meetingId: t.meetingId,
           task: t.task,
@@ -997,8 +1108,8 @@ function App() {
           priority: t.priority,
           remarks: t.remarks || ""
         });
-        setEditingId(t.id);
-        setFormError("");
+        setEditingTaskId(t.id);
+        setTaskFormError("");
         setModalOpen(true);
       } : undefined,
       style: {
@@ -1030,7 +1141,7 @@ function App() {
       }
     }, t.member), /*#__PURE__*/React.createElement("span", {
       className: "mono"
-    }, t.taskCode || t.id)), t.deadline && /*#__PURE__*/React.createElement("div", {
+    }, t.taskCode)), t.deadline && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
         marginTop: 6,
@@ -1132,7 +1243,7 @@ function App() {
       padding: "10px 12px",
       whiteSpace: "nowrap"
     }
-  }, canManageMembers && /*#__PURE__*/React.createElement("button", {
+  }, canManageMembers && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setMemberForm({
@@ -1156,7 +1267,7 @@ function App() {
       marginRight: 4,
       fontSize: 12
     }
-  }, "Edit"), canManageMembers && /*#__PURE__*/React.createElement("button", {
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => setConfirmDeleteMemberId(m.id),
     style: {
@@ -1166,7 +1277,7 @@ function App() {
       padding: 4,
       fontSize: 12
     }
-  }, "Delete")))))), members.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Delete"))))))), members.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "40px 0",
@@ -1210,7 +1321,7 @@ function App() {
       fontSize: 16,
       fontWeight: 700
     }
-  }, editingId !== null ? "Edit Task" : "New Task"), /*#__PURE__*/React.createElement("button", {
+  }, editingTaskId !== null ? "Edit Task" : "New Task"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => setModalOpen(false),
     style: {
@@ -1222,9 +1333,9 @@ function App() {
   }, "×")), /*#__PURE__*/React.createElement(Field, {
     label: "Member"
   }, /*#__PURE__*/React.createElement("select", {
-    value: form.member,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.member,
+    onChange: e => setTaskForm({
+      ...taskForm,
       member: e.target.value
     }),
     style: inputStyle
@@ -1244,9 +1355,9 @@ function App() {
   }, n))) : null)), /*#__PURE__*/React.createElement(Field, {
     label: "Meeting ID"
   }, /*#__PURE__*/React.createElement("input", {
-    value: form.meetingId,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.meetingId,
+    onChange: e => setTaskForm({
+      ...taskForm,
       meetingId: e.target.value
     }),
     placeholder: "e.g. 010",
@@ -1254,9 +1365,9 @@ function App() {
   })), /*#__PURE__*/React.createElement(Field, {
     label: "Task"
   }, /*#__PURE__*/React.createElement("textarea", {
-    value: form.task,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.task,
+    onChange: e => setTaskForm({
+      ...taskForm,
       task: e.target.value
     }),
     placeholder: "Describe the task",
@@ -1277,9 +1388,9 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("input", {
     type: "date",
-    value: form.assignedDate,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.assignedDate,
+    onChange: e => setTaskForm({
+      ...taskForm,
       assignedDate: e.target.value
     }),
     style: inputStyle
@@ -1290,9 +1401,9 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("input", {
     type: "date",
-    value: form.deadline,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.deadline,
+    onChange: e => setTaskForm({
+      ...taskForm,
       deadline: e.target.value
     }),
     style: inputStyle
@@ -1307,9 +1418,9 @@ function App() {
       flex: 1
     }
   }, /*#__PURE__*/React.createElement("select", {
-    value: form.status,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.status,
+    onChange: e => setTaskForm({
+      ...taskForm,
       status: e.target.value
     }),
     style: inputStyle
@@ -1321,9 +1432,9 @@ function App() {
       flex: 1
     }
   }, /*#__PURE__*/React.createElement("select", {
-    value: form.priority,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.priority,
+    onChange: e => setTaskForm({
+      ...taskForm,
       priority: e.target.value
     }),
     style: inputStyle
@@ -1332,9 +1443,9 @@ function App() {
   }, p))))), /*#__PURE__*/React.createElement(Field, {
     label: "Remarks"
   }, /*#__PURE__*/React.createElement("textarea", {
-    value: form.remarks,
-    onChange: e => setForm({
-      ...form,
+    value: taskForm.remarks,
+    onChange: e => setTaskForm({
+      ...taskForm,
       remarks: e.target.value
     }),
     placeholder: "Optional notes",
@@ -1343,13 +1454,13 @@ function App() {
       ...inputStyle,
       resize: "vertical"
     }
-  })), formError && /*#__PURE__*/React.createElement("div", {
+  })), taskFormError && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
       fontSize: 12.5,
       marginBottom: 10
     }
-  }, formError), /*#__PURE__*/React.createElement("div", {
+  }, taskFormError), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
@@ -1369,12 +1480,13 @@ function App() {
     }
   }, "Cancel"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
+    disabled: taskSaving,
     onClick: () => {
-      if (!form.member.trim() || !form.task.trim()) {
-        setFormError("Member and Task are required.");
+      if (!taskForm.member.trim() || !taskForm.task.trim()) {
+        setTaskFormError("Member and Task are required.");
         return;
       }
-      saveTask(form);
+      saveTask(taskForm);
     },
     style: {
       flex: 1,
@@ -1386,7 +1498,7 @@ function App() {
       fontSize: 13.5,
       fontWeight: 600
     }
-  }, editingId !== null ? "Save Changes" : "Add Task")))), confirmDeleteId !== null && /*#__PURE__*/React.createElement("div", {
+  }, taskSaving ? "Saving…" : editingTaskId !== null ? "Save Changes" : "Add Task")))), confirmDeleteId !== null && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
@@ -1598,6 +1710,7 @@ function App() {
     }
   }, "Cancel"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
+    disabled: memberSaving,
     onClick: () => {
       if (!memberForm.name.trim() || !memberForm.teamId.trim()) {
         setMemberFormError("Name and Team ID are required.");
@@ -1615,7 +1728,7 @@ function App() {
       fontSize: 13.5,
       fontWeight: 600
     }
-  }, editingMemberId !== null ? "Save Changes" : "Add Member")))), confirmDeleteMemberId !== null && /*#__PURE__*/React.createElement("div", {
+  }, memberSaving ? "Saving…" : editingMemberId !== null ? "Save Changes" : "Add Member")))), confirmDeleteMemberId !== null && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
@@ -1642,7 +1755,7 @@ function App() {
       fontSize: 14,
       marginBottom: 16
     }
-  }, "Remove this member? Existing tasks assigned to them will keep their name as text."), /*#__PURE__*/React.createElement("div", {
+  }, "Remove this member? Tasks assigned to them will keep their name as text."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10
