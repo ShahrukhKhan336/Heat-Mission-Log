@@ -170,7 +170,7 @@ function LoginScreen() {
       color: "#8593A3",
       marginBottom: 20
     }
-  }, "Sign in with your Team ID to continue."), /*#__PURE__*/React.createElement(Field, {
+  }, "Sign in with your email to continue."), /*#__PURE__*/React.createElement(Field, {
     label: "Team ID"
   }, /*#__PURE__*/React.createElement("input", {
     value: teamId,
