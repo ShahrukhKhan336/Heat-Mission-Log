@@ -16,8 +16,6 @@ const PRIORITY_COLOR = {
   Medium: "#4F8CFF",
   Low: "#5B6675"
 };
-
-// DB row → JS object (handles column name differences)
 function rowToMember(r) {
   return {
     id: r.id,
@@ -109,27 +107,30 @@ function FilterSelect({
   }, o === "All" ? "All" : labelPrefix + o)));
 }
 
-// ── Login screen (email + password) ──────────────────────────────────────
+// ── Login screen — Team ID + password only ────────────────────────────────
 function LoginScreen() {
-  const [email, setEmail] = useState("");
+  const [teamId, setTeamId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   async function attempt() {
-    if (!email.trim() || !password) {
-      setError("Enter your email and password.");
+    const id = teamId.trim();
+    if (!id || !password) {
+      setError("Enter your Team ID and password.");
       return;
     }
     setLoading(true);
     setError("");
+    // Map Team ID to a hidden internal email
+    const email = id + "@missionlog.app";
     const {
       error: e
     } = await db.auth.signInWithPassword({
-      email: email.trim(),
+      email,
       password
     });
     setLoading(false);
-    if (e) setError(e.message);
+    if (e) setError("Incorrect Team ID or password.");
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -169,15 +170,15 @@ function LoginScreen() {
       color: "#8593A3",
       marginBottom: 20
     }
-  }, "Sign in with your email to continue."), /*#__PURE__*/React.createElement(Field, {
-    label: "Email"
+  }, "Sign in with your Team ID to continue."), /*#__PURE__*/React.createElement(Field, {
+    label: "Team ID"
   }, /*#__PURE__*/React.createElement("input", {
-    type: "email",
-    value: email,
-    onChange: e => setEmail(e.target.value),
+    value: teamId,
+    onChange: e => setTeamId(e.target.value),
     onKeyDown: e => e.key === "Enter" && attempt(),
-    placeholder: "your@email.com",
-    style: inputStyle
+    placeholder: "e.g. 25-13860-0102",
+    style: inputStyle,
+    autoComplete: "username"
   })), /*#__PURE__*/React.createElement(Field, {
     label: "Password"
   }, /*#__PURE__*/React.createElement("input", {
@@ -186,7 +187,8 @@ function LoginScreen() {
     onChange: e => setPassword(e.target.value),
     onKeyDown: e => e.key === "Enter" && attempt(),
     placeholder: "Your password",
-    style: inputStyle
+    style: inputStyle,
+    autoComplete: "current-password"
   })), error && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
@@ -213,39 +215,13 @@ function LoginScreen() {
       fontSize: 11.5,
       color: "#5B6675"
     }
-  }, "No account? Ask your SPM or ASPM to invite you.")));
+  }, "Don't have access? Contact your SPM or ASPM.")));
 }
 
-// ── Claim screen (first login, not yet linked to a member row) ────────────
-function ClaimScreen({
-  authEmail,
-  onClaimed
+// ── Error screen (shown if member link fails) ─────────────────────────────
+function LinkErrorScreen({
+  message
 }) {
-  const [teamId, setTeamId] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  async function claim() {
-    const id = teamId.trim();
-    if (!id) {
-      setError("Enter your Team ID.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    const {
-      error: e
-    } = await db.rpc("claim_membership", {
-      p_team_id: id
-    });
-    setLoading(false);
-    if (e) {
-      setError(e.message);
-      return;
-    }
-    setDone(true);
-    setTimeout(onClaimed, 800);
-  }
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -264,89 +240,33 @@ function ClaimScreen({
       padding: 26
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "mono",
-    style: {
-      fontSize: 11,
-      letterSpacing: 2,
-      color: "#4F8CFF",
-      marginBottom: 6
-    }
-  }, "TEAM OPS · TASK TRACKER"), /*#__PURE__*/React.createElement("div", {
     className: "disp",
     style: {
-      fontSize: 22,
+      fontSize: 18,
       fontWeight: 700,
-      marginBottom: 8
+      marginBottom: 12,
+      color: "#E85D5D"
     }
-  }, "Link your account"), /*#__PURE__*/React.createElement("div", {
+  }, "Account error"), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 12.5,
+      fontSize: 13,
       color: "#8593A3",
-      marginBottom: 4
-    }
-  }, "Signed in as ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "#E8EDF2"
-    }
-  }, authEmail)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12.5,
-      color: "#8593A3",
-      marginBottom: 20
-    }
-  }, "Enter your pre-assigned Team ID to link this account to your member profile."), /*#__PURE__*/React.createElement(Field, {
-    label: "Team ID"
-  }, /*#__PURE__*/React.createElement("input", {
-    value: teamId,
-    onChange: e => setTeamId(e.target.value),
-    onKeyDown: e => e.key === "Enter" && claim(),
-    placeholder: "e.g. 26-13860-0301",
-    style: inputStyle
-  })), error && /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: "#E85D5D",
-      fontSize: 12.5,
-      marginBottom: 10
-    }
-  }, error), done && /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: "#3ECF9A",
-      fontSize: 12.5,
-      marginBottom: 10
-    }
-  }, "Linked! Loading your profile…"), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: claim,
-    disabled: loading || done,
-    style: {
-      width: "100%",
-      background: "#4F8CFF",
-      border: "none",
-      color: "#08111F",
-      borderRadius: 6,
-      padding: "10px 0",
-      fontSize: 13.5,
-      fontWeight: 600
-    }
-  }, loading ? "Linking…" : "Link Account"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 14,
-      fontSize: 11.5,
-      color: "#5B6675",
+      marginBottom: 20,
       lineHeight: 1.6
     }
-  }, "SPMT accounts are linked by the administrator. If you are SPMT, contact Dr. Saiaf Bin Rayhan."), /*#__PURE__*/React.createElement("button", {
+  }, message), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => db.auth.signOut(),
     style: {
-      marginTop: 10,
-      background: "none",
-      border: "none",
-      color: "#5B6675",
-      fontSize: 12,
-      padding: 0
+      width: "100%",
+      background: "transparent",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "10px 0",
+      fontSize: 13.5
     }
-  }, "Sign out")));
+  }, "Sign Out")));
 }
 
 // ── Main app ──────────────────────────────────────────────────────────────
@@ -355,6 +275,7 @@ function App() {
   const [authUser, setAuthUser] = useState(null);
   const [currentMember, setCurrentMember] = useState(null);
   const [memberChecked, setMemberChecked] = useState(false);
+  const [memberError, setMemberError] = useState("");
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
@@ -410,11 +331,12 @@ function App() {
     } = db.auth.onAuthStateChange((_event, session) => {
       setAuthUser(session?.user ?? null);
       setMemberChecked(false);
+      setMemberError("");
     });
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // ── Load member profile when auth user changes ────────────────────────
+  // ── Auto-link + load member via RPC ──────────────────────────────────
   useEffect(() => {
     if (!authUser) {
       setCurrentMember(null);
@@ -422,10 +344,17 @@ function App() {
       return;
     }
     setMemberChecked(false);
-    db.from("members").select("*").eq("auth_user_id", authUser.id).maybeSingle().then(({
-      data
+    setMemberError("");
+    db.rpc("link_or_get_member").then(({
+      data,
+      error
     }) => {
-      setCurrentMember(data ? rowToMember(data) : null);
+      if (error) {
+        setMemberError(error.message);
+        setCurrentMember(null);
+      } else {
+        setCurrentMember(data ? rowToMember(data) : null);
+      }
       setMemberChecked(true);
     });
   }, [authUser]);
@@ -439,7 +368,7 @@ function App() {
     setDataError("");
     const [tr, mr] = await Promise.all([db.from("tasks").select("*").order("id"), db.from("members").select("*").order("group_name").order("name")]);
     if (tr.error || mr.error) {
-      setDataError("Failed to load data. Please refresh the page.");
+      setDataError("Failed to load data. Please refresh.");
     } else {
       setTasks(tr.data.map(rowToTask));
       setMembers(mr.data.map(rowToMember));
@@ -636,16 +565,12 @@ function App() {
       color: "#8593A3"
     }
   }, "Checking profile…");
-  if (!currentMember) {
-    return /*#__PURE__*/React.createElement(ClaimScreen, {
-      authEmail: authUser.email,
-      onClaimed: () => {
-        db.from("members").select("*").eq("auth_user_id", authUser.id).maybeSingle().then(({
-          data
-        }) => setCurrentMember(data ? rowToMember(data) : null));
-      }
-    });
-  }
+  if (memberError) return /*#__PURE__*/React.createElement(LinkErrorScreen, {
+    message: memberError
+  });
+  if (!currentMember) return /*#__PURE__*/React.createElement(LinkErrorScreen, {
+    message: "Your account is not linked to a member profile. Contact your SPM."
+  });
   if (dataLoading) return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
