@@ -107,44 +107,48 @@ function FilterSelect({
   }, o === "All" ? "All" : labelPrefix + o)));
 }
 
-// ── Login — Team ID only ──────────────────────────────────────────────────
+// ── Login — Team ID + password ────────────────────────────────────────────
 function LoginScreen() {
   const [teamId, setTeamId] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   async function enter() {
     const id = teamId.trim();
+    const pw = password;
     if (!id) {
       setError("Enter your Team ID.");
+      return;
+    }
+    if (!pw) {
+      setError("Enter your password.");
       return;
     }
     setLoading(true);
     setError("");
     const email = id + "@missionlog.app";
-    const password = id;
 
     // Try sign in first
     const {
       error: signInErr
     } = await db.auth.signInWithPassword({
       email,
-      password
+      password: pw
     });
     if (!signInErr) {
       setLoading(false);
       return;
     }
 
-    // Account doesn't exist — create it automatically
+    // Account doesn't exist — create with the password they entered
     if (signInErr.message.toLowerCase().includes("invalid") || signInErr.message.toLowerCase().includes("credentials") || signInErr.message.toLowerCase().includes("not found")) {
       const {
         error: signUpErr
       } = await db.auth.signUp({
         email,
-        password
+        password: pw
       });
-      if (signUpErr) setError("Could not create account: " + signUpErr.message);
-      // onAuthStateChange will fire and auto-link will run
+      if (signUpErr) setError(signUpErr.message);
     } else {
       setError(signInErr.message);
     }
@@ -188,7 +192,7 @@ function LoginScreen() {
       color: "#8593A3",
       marginBottom: 22
     }
-  }, "Enter your Team ID to continue."), /*#__PURE__*/React.createElement(Field, {
+  }, "Enter your Team ID and password to continue."), /*#__PURE__*/React.createElement(Field, {
     label: "Team ID"
   }, /*#__PURE__*/React.createElement("input", {
     value: teamId,
@@ -198,6 +202,16 @@ function LoginScreen() {
     style: inputStyle,
     autoComplete: "username",
     autoFocus: true
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Password"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: password,
+    onChange: e => setPassword(e.target.value),
+    onKeyDown: e => e.key === "Enter" && enter(),
+    placeholder: "Your password",
+    style: inputStyle,
+    autoComplete: "current-password"
   })), error && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
@@ -218,13 +232,26 @@ function LoginScreen() {
       fontSize: 14,
       fontWeight: 600
     }
-  }, loading ? "Loading…" : "Enter"), /*#__PURE__*/React.createElement("div", {
+  }, loading ? "Loading…" : "Sign In"), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 6,
+      padding: "10px 12px",
       fontSize: 11.5,
-      color: "#5B6675"
+      color: "#5B6675",
+      lineHeight: 1.7
     }
-  }, "Don't have a Team ID? Contact your SPM or ASPM.")));
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, "SPMT & Faculty Advisors:"), " use the shared team password.", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, "All others:"), " your Team ID is your password.")));
 }
 
 // ── Profile modal ─────────────────────────────────────────────────────────
