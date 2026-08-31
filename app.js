@@ -107,54 +107,48 @@ function FilterSelect({
   }, o === "All" ? "All" : labelPrefix + o)));
 }
 
-// ── Auth screen — sign in OR sign up ──────────────────────────────────────
-function AuthScreen() {
-  const [mode, setMode] = useState("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+// ── Login — Team ID only ──────────────────────────────────────────────────
+function LoginScreen() {
+  const [teamId, setTeamId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkEmail, setCheckEmail] = useState(false);
-  function switchMode(m) {
-    setMode(m);
-    setError("");
-    setCheckEmail(false);
-  }
-  async function attempt() {
-    const e = email.trim();
-    if (!e || !password) {
-      setError("Enter your email and password.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+  const [error, setError] = useState("");
+  async function enter() {
+    const id = teamId.trim();
+    if (!id) {
+      setError("Enter your Team ID.");
       return;
     }
     setLoading(true);
     setError("");
-    if (mode === "signup") {
-      const {
-        error: err
-      } = await db.auth.signUp({
-        email: e,
-        password
-      });
+    const email = id + "@missionlog.app";
+    const password = id;
+
+    // Try sign in first
+    const {
+      error: signInErr
+    } = await db.auth.signInWithPassword({
+      email,
+      password
+    });
+    if (!signInErr) {
       setLoading(false);
-      if (err) {
-        setError(err.message);
-        return;
-      }
-      setCheckEmail(true);
-    } else {
-      const {
-        error: err
-      } = await db.auth.signInWithPassword({
-        email: e,
-        password
-      });
-      setLoading(false);
-      if (err) setError("Incorrect email or password.");
+      return;
     }
+
+    // Account doesn't exist — create it automatically
+    if (signInErr.message.toLowerCase().includes("invalid") || signInErr.message.toLowerCase().includes("credentials") || signInErr.message.toLowerCase().includes("not found")) {
+      const {
+        error: signUpErr
+      } = await db.auth.signUp({
+        email,
+        password
+      });
+      if (signUpErr) setError("Could not create account: " + signUpErr.message);
+      // onAuthStateChange will fire and auto-link will run
+    } else {
+      setError(signInErr.message);
+    }
+    setLoading(false);
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -170,7 +164,7 @@ function AuthScreen() {
       border: "1px solid #1F2733",
       borderRadius: 10,
       width: "100%",
-      maxWidth: 400,
+      maxWidth: 380,
       padding: 26
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -184,92 +178,26 @@ function AuthScreen() {
   }, "TEAM OPS · TASK TRACKER"), /*#__PURE__*/React.createElement("div", {
     className: "disp",
     style: {
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: 700,
-      marginBottom: 20
+      marginBottom: 8
     }
   }, "Mission Log"), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      background: "#0A0E14",
-      border: "1px solid #1F2733",
-      borderRadius: 6,
-      marginBottom: 20,
-      overflow: "hidden"
-    }
-  }, ["signin", "signup"].map(m => /*#__PURE__*/React.createElement("button", {
-    key: m,
-    className: "btn",
-    onClick: () => switchMode(m),
-    style: {
-      flex: 1,
-      padding: "9px 0",
-      border: "none",
-      fontSize: 13,
-      fontWeight: 600,
-      background: mode === m ? "#4F8CFF" : "transparent",
-      color: mode === m ? "#08111F" : "#8593A3"
-    }
-  }, m === "signin" ? "Sign In" : "Sign Up"))), checkEmail ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "20px 0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 28,
-      marginBottom: 12
-    }
-  }, "✉️"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 14,
-      marginBottom: 8
-    }
-  }, "Check your email"), /*#__PURE__*/React.createElement("div", {
-    style: {
       fontSize: 12.5,
       color: "#8593A3",
-      lineHeight: 1.6
+      marginBottom: 22
     }
-  }, "We sent a confirmation link to ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "#E8EDF2"
-    }
-  }, email), ". Click it to activate your account, then come back and sign in."), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => {
-      setCheckEmail(false);
-      setMode("signin");
-    },
-    style: {
-      marginTop: 16,
-      background: "transparent",
-      border: "1px solid #1F2733",
-      color: "#8593A3",
-      borderRadius: 6,
-      padding: "8px 20px",
-      fontSize: 13
-    }
-  }, "Back to sign in")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Field, {
-    label: "Email"
+  }, "Enter your Team ID to continue."), /*#__PURE__*/React.createElement(Field, {
+    label: "Team ID"
   }, /*#__PURE__*/React.createElement("input", {
-    type: "email",
-    value: email,
-    onChange: e => setEmail(e.target.value),
-    onKeyDown: e => e.key === "Enter" && attempt(),
-    placeholder: "your@email.com",
+    value: teamId,
+    onChange: e => setTeamId(e.target.value),
+    onKeyDown: e => e.key === "Enter" && enter(),
+    placeholder: "e.g. 25-13860-0102",
     style: inputStyle,
-    autoComplete: "email"
-  })), /*#__PURE__*/React.createElement(Field, {
-    label: "Password"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "password",
-    value: password,
-    onChange: e => setPassword(e.target.value),
-    onKeyDown: e => e.key === "Enter" && attempt(),
-    placeholder: mode === "signup" ? "Min. 6 characters" : "Your password",
-    style: inputStyle,
-    autoComplete: mode === "signup" ? "new-password" : "current-password"
+    autoComplete: "username",
+    autoFocus: true
   })), error && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
@@ -278,7 +206,7 @@ function AuthScreen() {
     }
   }, error), /*#__PURE__*/React.createElement("button", {
     className: "btn",
-    onClick: attempt,
+    onClick: enter,
     disabled: loading,
     style: {
       width: "100%",
@@ -286,143 +214,202 @@ function AuthScreen() {
       border: "none",
       color: "#08111F",
       borderRadius: 6,
-      padding: "10px 0",
-      fontSize: 13.5,
+      padding: "11px 0",
+      fontSize: 14,
       fontWeight: 600
     }
-  }, loading ? mode === "signup" ? "Creating account…" : "Signing in…" : mode === "signup" ? "Create Account" : "Sign In"), mode === "signin" && /*#__PURE__*/React.createElement("div", {
+  }, loading ? "Loading…" : "Enter"), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
       fontSize: 11.5,
       color: "#5B6675"
     }
-  }, "No account yet? Switch to Sign Up above."))));
+  }, "Don't have a Team ID? Contact your SPM or ASPM.")));
 }
 
-// ── Claim screen — enter Team ID after first login ────────────────────────
-function ClaimScreen({
-  authEmail,
-  onClaimed
+// ── Profile modal ─────────────────────────────────────────────────────────
+function ProfileModal({
+  member,
+  onClose,
+  onSaved
 }) {
-  const [teamId, setTeamId] = useState("");
+  const [name, setName] = useState(member.name);
+  const [email, setEmail] = useState(member.email);
+  const [mobile, setMobile] = useState(member.mobile);
+  const [newPass, setNewPass] = useState("");
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [isSpmt, setIsSpmt] = useState(false);
-  async function claim() {
-    const id = teamId.trim();
-    if (!id) {
-      setError("Enter your Team ID.");
-      return;
-    }
-    setLoading(true);
+  const [success, setSuccess] = useState("");
+  async function save() {
+    setSaving(true);
     setError("");
-    setIsSpmt(false);
-    const {
-      error: e
-    } = await db.rpc("claim_membership", {
-      p_team_id: id
-    });
-    setLoading(false);
-    if (e) {
-      if (e.message.toLowerCase().includes("spmt")) {
-        setIsSpmt(true);
-      } else {
-        setError(e.message);
+    setSuccess("");
+    try {
+      // Update member record
+      const {
+        error: e1
+      } = await db.from("members").update({
+        name: name.trim(),
+        email: email.trim(),
+        mobile: mobile.trim()
+      }).eq("auth_user_id", (await db.auth.getUser()).data.user?.id);
+      if (e1) throw e1;
+
+      // Change password if provided
+      if (newPass.trim()) {
+        if (newPass.length < 6) throw new Error("Password must be at least 6 characters.");
+        const {
+          error: e2
+        } = await db.auth.updateUser({
+          password: newPass.trim()
+        });
+        if (e2) throw e2;
       }
-      return;
+      setSuccess("Saved!");
+      setNewPass("");
+      onSaved();
+    } catch (err) {
+      setError(err.message || "Failed to save.");
     }
-    setDone(true);
-    setTimeout(onClaimed, 800);
+    setSaving(false);
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      minHeight: "100vh",
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,.6)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      zIndex: 100,
       padding: 16
-    }
+    },
+    onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
     style: {
       background: "#121821",
       border: "1px solid #1F2733",
       borderRadius: 10,
       width: "100%",
-      maxWidth: 400,
-      padding: 26
+      maxWidth: 420,
+      padding: 22
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "mono",
     style: {
-      fontSize: 11,
-      letterSpacing: 2,
-      color: "#4F8CFF",
-      marginBottom: 6
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 18
     }
-  }, "TEAM OPS · TASK TRACKER"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     className: "disp",
     style: {
-      fontSize: 22,
-      fontWeight: 700,
-      marginBottom: 8
+      fontSize: 16,
+      fontWeight: 700
     }
-  }, "Link your account"), /*#__PURE__*/React.createElement("div", {
+  }, "My Profile"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: onClose,
     style: {
-      fontSize: 12.5,
+      background: "none",
+      border: "none",
       color: "#8593A3",
-      marginBottom: 20,
-      lineHeight: 1.6
+      fontSize: 16
     }
-  }, "Signed in as ", /*#__PURE__*/React.createElement("span", {
+  }, "×")), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: "#E8EDF2"
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 6,
+      padding: "10px 12px",
+      marginBottom: 16,
+      fontSize: 12.5
     }
-  }, authEmail), ".", /*#__PURE__*/React.createElement("br", null), "Enter your Team ID to connect to your member profile."), isSpmt ? /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
-      background: "#1A2233",
-      border: "1px solid #2A3A55",
-      borderRadius: 8,
-      padding: "14px 16px",
-      fontSize: 13,
-      lineHeight: 1.6
+      color: "#5B6675"
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: "#4F8CFF",
-      fontWeight: 600,
-      marginBottom: 6
-    }
-  }, "SPMT account detected"), /*#__PURE__*/React.createElement("div", {
+  }, "Team ID: "), /*#__PURE__*/React.createElement("span", {
+    className: "mono",
     style: {
       color: "#8593A3"
     }
-  }, "SPMT accounts must be linked by the administrator. Share your email with your SPM — they will link you manually and let you know when it's done.")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Field, {
-    label: "Team ID"
+  }, member.teamId), /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 12,
+      color: "#5B6675"
+    }
+  }, "Group: "), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, member.group)), /*#__PURE__*/React.createElement(Field, {
+    label: "Name"
   }, /*#__PURE__*/React.createElement("input", {
-    value: teamId,
-    onChange: e => setTeamId(e.target.value),
-    onKeyDown: e => e.key === "Enter" && claim(),
-    placeholder: "e.g. 26-13860-0301",
+    value: name,
+    onChange: e => setName(e.target.value),
     style: inputStyle
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Email (for task notifications)"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "email",
+    value: email,
+    onChange: e => setEmail(e.target.value),
+    placeholder: "your@email.com",
+    style: inputStyle
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Mobile"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: mobile,
+    onChange: e => setMobile(e.target.value),
+    placeholder: "e.g. 01XXXXXXXXX",
+    style: inputStyle
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "New Password (leave blank to keep current)"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: newPass,
+    onChange: e => setNewPass(e.target.value),
+    placeholder: "Min. 6 characters",
+    style: inputStyle,
+    autoComplete: "new-password"
   })), error && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
       fontSize: 12.5,
       marginBottom: 10
     }
-  }, error), done && /*#__PURE__*/React.createElement("div", {
+  }, error), success && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#3ECF9A",
       fontSize: 12.5,
       marginBottom: 10
     }
-  }, "Linked! Loading your profile…"), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: claim,
-    disabled: loading || done,
+  }, success), /*#__PURE__*/React.createElement("div", {
     style: {
-      width: "100%",
+      display: "flex",
+      gap: 10,
+      marginTop: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: onClose,
+    style: {
+      flex: 1,
+      background: "transparent",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "10px 0",
+      fontSize: 13.5
+    }
+  }, "Cancel"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: save,
+    disabled: saving,
+    style: {
+      flex: 1,
       background: "#4F8CFF",
       border: "none",
       color: "#08111F",
@@ -431,18 +418,7 @@ function ClaimScreen({
       fontSize: 13.5,
       fontWeight: 600
     }
-  }, loading ? "Linking…" : "Link Account")), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => db.auth.signOut(),
-    style: {
-      marginTop: 14,
-      background: "none",
-      border: "none",
-      color: "#5B6675",
-      fontSize: 12,
-      padding: 0
-    }
-  }, "Sign out")));
+  }, saving ? "Saving…" : "Save Changes"))));
 }
 
 // ── Main app ──────────────────────────────────────────────────────────────
@@ -451,10 +427,12 @@ function App() {
   const [authUser, setAuthUser] = useState(null);
   const [currentMember, setCurrentMember] = useState(null);
   const [memberChecked, setMemberChecked] = useState(false);
+  const [memberError, setMemberError] = useState("");
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [view, setView] = useState("table");
   const [search, setSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState("All");
@@ -490,6 +468,8 @@ function App() {
   const [memberFormError, setMemberFormError] = useState("");
   const [memberSaving, setMemberSaving] = useState(false);
   const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
+
+  // Auth listener
   useEffect(() => {
     db.auth.getSession().then(({
       data: {
@@ -504,9 +484,12 @@ function App() {
     } = db.auth.onAuthStateChange((_event, session) => {
       setAuthUser(session?.user ?? null);
       setMemberChecked(false);
+      setMemberError("");
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Auto-link after auth
   useEffect(() => {
     if (!authUser) {
       setCurrentMember(null);
@@ -514,11 +497,30 @@ function App() {
       return;
     }
     setMemberChecked(false);
-    db.rpc("link_or_get_member").then(({
+    db.rpc("link_or_get_member").then(async ({
       data
     }) => {
-      setCurrentMember(data ? rowToMember(data) : null);
-      setMemberChecked(true);
+      if (data) {
+        setCurrentMember(rowToMember(data));
+        setMemberChecked(true);
+      } else {
+        // Not linked yet — auto-claim using Team ID from email
+        const teamId = authUser.email.replace("@missionlog.app", "");
+        const {
+          error: claimErr
+        } = await db.rpc("claim_membership", {
+          p_team_id: teamId
+        });
+        if (!claimErr) {
+          const {
+            data: d2
+          } = await db.rpc("link_or_get_member");
+          setCurrentMember(d2 ? rowToMember(d2) : null);
+        } else {
+          setMemberError(claimErr.message);
+        }
+        setMemberChecked(true);
+      }
     });
   }, [authUser]);
   useEffect(() => {
@@ -699,37 +701,61 @@ function App() {
       legacy
     };
   }, [members, tasks]);
-
-  // Guards
-  const spinner = /*#__PURE__*/React.createElement("div", {
+  const spin = color => /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      color: "#8593A3"
+      color: color || "#8593A3"
     }
   }, "Loading…");
-  if (!authReady) return spinner;
-  if (!authUser) return /*#__PURE__*/React.createElement(AuthScreen, null);
-  if (!memberChecked) return spinner;
-  if (!currentMember) return /*#__PURE__*/React.createElement(ClaimScreen, {
-    authEmail: authUser.email,
-    onClaimed: () => {
-      db.rpc("link_or_get_member").then(({
-        data
-      }) => setCurrentMember(data ? rowToMember(data) : null));
-    }
-  });
-  if (dataLoading) return /*#__PURE__*/React.createElement("div", {
+  if (!authReady) return spin();
+  if (!authUser) return /*#__PURE__*/React.createElement(LoginScreen, null);
+  if (!memberChecked) return spin();
+  if (memberError) return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      color: "#8593A3"
+      padding: 16
     }
-  }, "Loading tasks…");
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 10,
+      maxWidth: 400,
+      padding: 24,
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#E85D5D",
+      marginBottom: 12,
+      fontSize: 14
+    }
+  }, memberError), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#8593A3",
+      fontSize: 12.5,
+      marginBottom: 16
+    }
+  }, "Contact your SPM or ASPM for help."), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => db.auth.signOut(),
+    style: {
+      background: "transparent",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "8px 20px",
+      fontSize: 13
+    }
+  }, "Sign Out")));
+  if (!currentMember) return spin();
+  if (dataLoading) return spin();
   if (dataError) return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -758,7 +784,20 @@ function App() {
     style: {
       minHeight: "100vh"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, profileOpen && /*#__PURE__*/React.createElement(ProfileModal, {
+    member: currentMember,
+    onClose: () => setProfileOpen(false),
+    onSaved: async () => {
+      const {
+        data
+      } = await db.rpc("link_or_get_member");
+      if (data) {
+        setCurrentMember(rowToMember(data));
+        await reloadMembers();
+      }
+      setProfileOpen(false);
+    }
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 1180,
       margin: "0 auto",
@@ -808,7 +847,19 @@ function App() {
       fontSize: 11,
       color: canEditTasks ? "#3ECF9A" : "#8593A3"
     }
-  }, canEditTasks ? "Editor" : "Viewer", " · ", currentMember.group)), canManageMembers && /*#__PURE__*/React.createElement("button", {
+  }, canEditTasks ? "Editor" : "Viewer", " · ", currentMember.group)), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setProfileOpen(true),
+    style: {
+      background: "#1A222D",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "10px 14px",
+      fontSize: 12.5
+    },
+    title: "Edit profile"
+  }, "Profile"), canManageMembers && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setMemberForm({
@@ -898,7 +949,37 @@ function App() {
       fontWeight: 700,
       color
     }
-  }, value)))), /*#__PURE__*/React.createElement("div", {
+  }, value)))), !currentMember.email && canEditTasks && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#1A1500",
+      border: "1px solid #E8A33D44",
+      borderRadius: 8,
+      padding: "10px 14px",
+      marginBottom: 16,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#E8A33D"
+    }
+  }, "Add your email in Profile to receive task notifications."), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setProfileOpen(true),
+    style: {
+      background: "#E8A33D",
+      border: "none",
+      color: "#0A0E14",
+      borderRadius: 5,
+      padding: "5px 12px",
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: "nowrap"
+    }
+  }, "Add Email")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
