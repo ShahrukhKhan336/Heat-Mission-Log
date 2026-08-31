@@ -470,6 +470,7 @@ function App() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskForm, setTaskForm] = useState({
     member: "",
+    members: [],
     meetingId: "",
     task: "",
     assignedDate: "",
@@ -581,42 +582,56 @@ function App() {
   }
   const canEditTasks = !!currentMember && (currentMember.group === "SPMT" || currentMember.group === "Faculty Advisors");
   const canManageMembers = !!currentMember && currentMember.group === "SPMT";
-  async function nextTaskCode() {
+  async function nextTaskCodeNum() {
     const {
       data
     } = await db.from("tasks").select("task_code").order("id", {
       ascending: false
     }).limit(1);
-    if (!data || !data.length) return "T001";
+    if (!data || !data.length) return 1;
     const n = parseInt((data[0].task_code || "").replace(/^T/i, ""), 10);
-    return "T" + String((isNaN(n) ? 0 : n) + 1).padStart(3, "0");
+    return isNaN(n) ? 1 : n + 1;
   }
   async function saveTask(form) {
     setTaskSaving(true);
     setTaskFormError("");
     try {
-      const payload = {
-        member: form.member.trim(),
-        meeting_id: form.meetingId,
-        task: form.task.trim(),
-        assigned_date: form.assignedDate || null,
-        deadline: form.deadline || null,
-        status: form.status,
-        priority: form.priority,
-        remarks: (form.remarks || "").trim()
-      };
-      let error;
       if (editingTaskId !== null) {
-        ({
+        // Edit: single task update
+        const {
           error
-        } = await db.from("tasks").update(payload).eq("id", editingTaskId));
+        } = await db.from("tasks").update({
+          member: form.member.trim(),
+          meeting_id: form.meetingId,
+          task: form.task.trim(),
+          assigned_date: form.assignedDate || null,
+          deadline: form.deadline || null,
+          status: form.status,
+          priority: form.priority,
+          remarks: (form.remarks || "").trim()
+        }).eq("id", editingTaskId);
+        if (error) throw error;
       } else {
-        payload.task_code = await nextTaskCode();
-        ({
-          error
-        } = await db.from("tasks").insert(payload));
+        // New: one task per selected member
+        let codeNum = await nextTaskCodeNum();
+        for (const memberName of form.members) {
+          const {
+            error
+          } = await db.from("tasks").insert({
+            task_code: "T" + String(codeNum).padStart(3, "0"),
+            member: memberName,
+            meeting_id: form.meetingId,
+            task: form.task.trim(),
+            assigned_date: form.assignedDate || null,
+            deadline: form.deadline || null,
+            status: form.status,
+            priority: form.priority,
+            remarks: (form.remarks || "").trim()
+          });
+          if (error) throw error;
+          codeNum++;
+        }
       }
-      if (error) throw error;
       setModalOpen(false);
       await reloadTasks();
     } catch (err) {
@@ -916,6 +931,7 @@ function App() {
     onClick: () => {
       setTaskForm({
         member: "",
+        members: [],
         meetingId: "",
         task: "",
         assignedDate: "",
@@ -1511,7 +1527,7 @@ function App() {
       color: "#8593A3",
       fontSize: 16
     }
-  }, "×")), /*#__PURE__*/React.createElement(Field, {
+  }, "×")), editingTaskId !== null ? /*#__PURE__*/React.createElement(Field, {
     label: "Member"
   }, /*#__PURE__*/React.createElement("select", {
     value: taskForm.member,
@@ -1533,7 +1549,83 @@ function App() {
   }, memberOptions.legacy.map(n => /*#__PURE__*/React.createElement("option", {
     key: n,
     value: n
-  }, n))) : null)), /*#__PURE__*/React.createElement(Field, {
+  }, n))) : null)) : /*#__PURE__*/React.createElement(Field, {
+    label: "Assign to"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      border: "1px solid #1F2733",
+      borderRadius: 6,
+      maxHeight: 220,
+      overflowY: "auto",
+      background: "#0A0E14"
+    }
+  }, GROUPS.map(g => memberOptions.byGroup[g]?.length ? /*#__PURE__*/React.createElement("div", {
+    key: g
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "5px 10px",
+      fontSize: 10.5,
+      color: "#5B6675",
+      fontWeight: 700,
+      letterSpacing: .8,
+      background: "#0D1420",
+      textTransform: "uppercase"
+    }
+  }, g), memberOptions.byGroup[g].map(m => /*#__PURE__*/React.createElement("label", {
+    key: m.id,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "7px 10px",
+      cursor: "pointer",
+      borderTop: "1px solid #1F273322"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: taskForm.members.includes(m.name),
+    onChange: e => setTaskForm(prev => ({
+      ...prev,
+      members: e.target.checked ? [...prev.members, m.name] : prev.members.filter(n => n !== m.name)
+    }))
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13
+    }
+  }, m.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: "#5B6675",
+      marginLeft: "auto"
+    }
+  }, m.teamId)))) : null), memberOptions.legacy.map(n => /*#__PURE__*/React.createElement("label", {
+    key: n,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "7px 10px",
+      cursor: "pointer",
+      borderTop: "1px solid #1F273322"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: taskForm.members.includes(n),
+    onChange: e => setTaskForm(prev => ({
+      ...prev,
+      members: e.target.checked ? [...prev.members, n] : prev.members.filter(x => x !== n)
+    }))
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13
+    }
+  }, n)))), taskForm.members.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      fontSize: 11.5,
+      color: "#4F8CFF"
+    }
+  }, taskForm.members.length, " member", taskForm.members.length > 1 ? "s" : "", " selected — ", taskForm.members.length, " task", taskForm.members.length > 1 ? "s" : "", " will be created")), /*#__PURE__*/React.createElement(Field, {
     label: "Meeting ID"
   }, /*#__PURE__*/React.createElement("input", {
     value: taskForm.meetingId,
@@ -1663,9 +1755,16 @@ function App() {
     className: "btn",
     disabled: taskSaving,
     onClick: () => {
-      if (!taskForm.member.trim() || !taskForm.task.trim()) {
-        setTaskFormError("Member and Task are required.");
-        return;
+      if (editingTaskId !== null) {
+        if (!taskForm.member || !taskForm.task.trim()) {
+          setTaskFormError("Member and Task are required.");
+          return;
+        }
+      } else {
+        if (taskForm.members.length === 0 || !taskForm.task.trim()) {
+          setTaskFormError("Select at least one member and enter a task.");
+          return;
+        }
       }
       saveTask(taskForm);
     },
@@ -1679,7 +1778,7 @@ function App() {
       fontSize: 13.5,
       fontWeight: 600
     }
-  }, taskSaving ? "Saving…" : editingTaskId !== null ? "Save Changes" : "Add Task")))), confirmDeleteId !== null && /*#__PURE__*/React.createElement("div", {
+  }, taskSaving ? "Saving…" : editingTaskId !== null ? "Save Changes" : taskForm.members.length > 1 ? `Add ${taskForm.members.length} Tasks` : "Add Task")))), confirmDeleteId !== null && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
