@@ -732,19 +732,22 @@ function App() {
   }
   const memberNames = useMemo(() => Array.from(new Set(tasks.map(t => t.member).filter(Boolean))).sort(), [tasks]);
   const meetings = useMemo(() => Array.from(new Set(tasks.map(t => t.meetingId).filter(Boolean))).sort(), [tasks]);
-  const filtered = useMemo(() => tasks.filter(t => {
-    if (hideDone && t.status === "Done") return false;
-    if (memberFilter !== "All" && t.member !== memberFilter) return false;
-    if (meetingFilter !== "All" && t.meetingId !== meetingFilter) return false;
-    if (statusFilter === "Active" && t.status === "Done") return false;
-    if (statusFilter !== "Active" && statusFilter !== "All" && t.status !== statusFilter) return false;
-    if (priorityFilter !== "All" && t.priority !== priorityFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (!(t.task + " " + t.member + " " + t.remarks + " " + t.meetingId).toLowerCase().includes(q)) return false;
-    }
-    return true;
-  }), [tasks, hideDone, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
+  const filtered = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    return tasks.filter(t => {
+      if (memberFilter !== "All" && (t.member || "") !== memberFilter) return false;
+      if (meetingFilter !== "All" && (t.meetingId || "") !== meetingFilter) return false;
+      if (statusFilter !== "All" && (t.status || "") !== statusFilter) return false;
+      if (priorityFilter !== "All" && (t.priority || "") !== priorityFilter) return false;
+      if (search && search.trim()) {
+        const q = search.toLowerCase();
+        const hay = ((t.task || "") + " " + (t.member || "") + " " + (t.remarks || "") + " " + (t.meetingId || "")).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [tasks, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
+  const visibleTasks = showDone ? filtered : filtered.filter(t => (t.status || "") !== "Done");
   const stats = useMemo(() => ({
     total: tasks.length,
     todo: tasks.filter(t => t.status === "To Do").length,
@@ -1151,7 +1154,7 @@ function App() {
       fontWeight: 600,
       whiteSpace: "nowrap"
     }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(t => {
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, visibleTasks.map(t => {
     const overdue = isOverdue(t);
     const canChangeStatus = canEditTasks || currentMember && t.member === currentMember.name;
     return /*#__PURE__*/React.createElement("tr", {
@@ -1288,7 +1291,7 @@ function App() {
         fontSize: 12
       }
     }, "Delete"))));
-  }))), filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }))), visibleTasks.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "60px 0",
@@ -1328,13 +1331,13 @@ function App() {
       fontSize: 11,
       color: "#5B6675"
     }
-  }, filtered.filter(t => t.status === status).length)), /*#__PURE__*/React.createElement("div", {
+  }, visibleTasks.filter(t => t.status === status).length)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
       gap: 8
     }
-  }, filtered.filter(t => t.status === status).map(t => {
+  }, visibleTasks.filter(t => t.status === status).map(t => {
     const overdue = isOverdue(t);
     return /*#__PURE__*/React.createElement("div", {
       key: t.id,
@@ -1390,7 +1393,7 @@ function App() {
         color: overdue ? "#E85D5D" : "#5B6675"
       }
     }, "Due ", fmtDate(t.deadline), overdue ? " · overdue" : ""));
-  }), filtered.filter(t => t.status === status).length === 0 && /*#__PURE__*/React.createElement("div", {
+  }), visibleTasks.filter(t => t.status === status).length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: "#3A424D",
