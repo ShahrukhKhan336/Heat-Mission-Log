@@ -1581,7 +1581,7 @@ function App() {
       background: "#161D26",
       textAlign: "left"
     }
-  }, ["Team ID", "Name", "Group", "Total", "To Do", "In Progress", "Overdue", "Done", ""].map(h => /*#__PURE__*/React.createElement("th", {
+  }, ["Team ID", "Name", "Group", "Email", "Phone", "Joined", "To Do", "In Progress", "Overdue", "Done", ""].map(h => /*#__PURE__*/React.createElement("th", {
     key: h,
     style: {
       padding: "10px 12px",
@@ -1623,12 +1623,27 @@ function App() {
       color: "#8593A3"
     }
   }, m.group), /*#__PURE__*/React.createElement("td", {
-    className: "mono",
     style: {
       padding: "10px 12px",
-      color: "#E8EDF2"
+      color: "#8593A3",
+      maxWidth: 160,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
     }
-  }, tasks.filter(t => t.member === m.name).length), /*#__PURE__*/React.createElement("td", {
+  }, m.email || "—"), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: "10px 12px",
+      color: "#8593A3",
+      whiteSpace: "nowrap"
+    }
+  }, m.mobile || "—"), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: "10px 12px",
+      color: "#8593A3",
+      whiteSpace: "nowrap"
+    }
+  }, fmtDate(m.joinedDate)), /*#__PURE__*/React.createElement("td", {
     className: "mono",
     style: {
       padding: "10px 12px",
