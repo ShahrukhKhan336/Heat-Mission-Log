@@ -466,8 +466,6 @@ function App() {
   const [meetingFilter, setMeetingFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
-  const [showDone, setShowDone] = useState(true);
-  const [hideDone, setHideDone] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskForm, setTaskForm] = useState({
@@ -747,7 +745,6 @@ function App() {
       return true;
     });
   }, [tasks, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
-  const visibleTasks = showDone ? filtered : filtered.filter(t => (t.status || "") !== "Done");
   const stats = useMemo(() => ({
     total: tasks.length,
     todo: tasks.filter(t => t.status === "To Do").length,
@@ -1080,24 +1077,12 @@ function App() {
   }), /*#__PURE__*/React.createElement(FilterSelect, {
     value: statusFilter,
     onChange: setStatusFilter,
-    options: ["Active", "To Do", "In Progress", "Done", "All"]
+    options: ["All", "To Do", "In Progress", "Done"]
   }), /*#__PURE__*/React.createElement(FilterSelect, {
     value: priorityFilter,
     onChange: setPriorityFilter,
     options: ["All", ...PRIORITIES]
-  }), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => setShowDone(p => !p),
-    style: {
-      background: showDone ? "#121821" : "#1A1500",
-      border: "1px solid " + (showDone ? "#1F2733" : "#E8A33D55"),
-      color: showDone ? "#8593A3" : "#E8A33D",
-      borderRadius: 6,
-      padding: "8px 12px",
-      fontSize: 12.5,
-      whiteSpace: "nowrap"
-    }
-  }, showDone ? "Hide completed" : "Show completed"), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       background: "#121821",
@@ -1116,19 +1101,7 @@ function App() {
       color: view === v ? "#E8EDF2" : "#8593A3",
       fontSize: 12.5
     }
-  }, v[0].toUpperCase() + v.slice(1)))), (view === "table" || view === "board") && /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => setHideDone(h => !h),
-    style: {
-      background: hideDone ? "#121821" : "#1A2D1A",
-      border: "1px solid " + (hideDone ? "#1F2733" : "#3ECF9A55"),
-      borderRadius: 6,
-      padding: "8px 12px",
-      color: hideDone ? "#5B6675" : "#3ECF9A",
-      fontSize: 12.5,
-      whiteSpace: "nowrap"
-    }
-  }, hideDone ? `Show completed (${tasks.filter(t => t.status === "Done").length})` : "Hide completed")), view === "table" && /*#__PURE__*/React.createElement("div", {
+  }, v[0].toUpperCase() + v.slice(1))))), view === "table" && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#121821",
       border: "1px solid #1F2733",
@@ -1154,7 +1127,7 @@ function App() {
       fontWeight: 600,
       whiteSpace: "nowrap"
     }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, visibleTasks.map(t => {
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(t => {
     const overdue = isOverdue(t);
     const canChangeStatus = canEditTasks || currentMember && t.member === currentMember.name;
     return /*#__PURE__*/React.createElement("tr", {
@@ -1291,7 +1264,7 @@ function App() {
         fontSize: 12
       }
     }, "Delete"))));
-  }))), visibleTasks.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }))), filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "60px 0",
@@ -1331,13 +1304,13 @@ function App() {
       fontSize: 11,
       color: "#5B6675"
     }
-  }, visibleTasks.filter(t => t.status === status).length)), /*#__PURE__*/React.createElement("div", {
+  }, filtered.filter(t => t.status === status).length)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
       gap: 8
     }
-  }, visibleTasks.filter(t => t.status === status).map(t => {
+  }, filtered.filter(t => t.status === status).map(t => {
     const overdue = isOverdue(t);
     return /*#__PURE__*/React.createElement("div", {
       key: t.id,
@@ -1393,7 +1366,7 @@ function App() {
         color: overdue ? "#E85D5D" : "#5B6675"
       }
     }, "Due ", fmtDate(t.deadline), overdue ? " · overdue" : ""));
-  }), visibleTasks.filter(t => t.status === status).length === 0 && /*#__PURE__*/React.createElement("div", {
+  }), filtered.filter(t => t.status === status).length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: "#3A424D",
