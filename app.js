@@ -496,6 +496,9 @@ function App() {
   const [memberFormError, setMemberFormError] = useState("");
   const [memberSaving, setMemberSaving] = useState(false);
   const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
+  const [taskLog, setTaskLog] = useState([]);
+  const [logLoading, setLogLoading] = useState(false);
+  const [profileMember, setProfileMember] = useState(null);
 
   // Auth listener
   useEffect(() => {
@@ -580,6 +583,20 @@ function App() {
     } = await db.from("members").select("*").order("group_name").order("name");
     if (!error) setMembers(data.map(rowToMember));
   }
+  async function loadTaskLog() {
+    setLogLoading(true);
+    const {
+      data,
+      error
+    } = await db.from("task_log").select("*").order("action_at", {
+      ascending: false
+    }).limit(1000);
+    if (!error) setTaskLog(data || []);
+    setLogLoading(false);
+  }
+  useEffect(() => {
+    if (view === "logs") loadTaskLog();
+  }, [view]);
   const canEditTasks = !!currentMember && (currentMember.group === "SPMT" || currentMember.group === "Faculty Advisors");
   const canManageMembers = !!currentMember && currentMember.group === "SPMT";
   async function nextTaskCodeNum() {
@@ -1069,7 +1086,7 @@ function App() {
       borderRadius: 6,
       overflow: "hidden"
     }
-  }, ["table", "board", "members"].map(v => /*#__PURE__*/React.createElement("button", {
+  }, ["table", "board", "members", "logs"].map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
     className: "btn",
     onClick: () => setView(v),
@@ -1380,8 +1397,10 @@ function App() {
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, members.map(m => /*#__PURE__*/React.createElement("tr", {
     key: m.id,
     className: "rowhover",
+    onClick: () => setProfileMember(m),
     style: {
-      borderTop: "1px solid #1F2733"
+      borderTop: "1px solid #1F2733",
+      cursor: "pointer"
     }
   }, /*#__PURE__*/React.createElement("td", {
     className: "mono",
@@ -1481,7 +1500,346 @@ function App() {
       color: "#5B6675",
       fontSize: 13.5
     }
-  }, "No members yet."))), modalOpen && /*#__PURE__*/React.createElement("div", {
+  }, "No members yet."))), profileMember && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,.65)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 60,
+      padding: 16
+    },
+    onClick: () => setProfileMember(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 12,
+      width: "100%",
+      maxWidth: 520,
+      padding: 24,
+      maxHeight: "88vh",
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 52,
+      height: 52,
+      borderRadius: "50%",
+      background: "#1A2A4A",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 20,
+      fontWeight: 700,
+      color: "#4F8CFF"
+    }
+  }, profileMember.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 18,
+      fontWeight: 700
+    }
+  }, profileMember.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#8593A3",
+      marginTop: 2
+    }
+  }, profileMember.role, " · ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#4F8CFF"
+    }
+  }, profileMember.group)))), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setProfileMember(null),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#8593A3",
+      fontSize: 18
+    }
+  }, "×")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(4, 1fr)",
+      gap: 8,
+      marginBottom: 18
+    }
+  }, [["Assigned", tasks.filter(t => t.member === profileMember.name).length, "#E8EDF2"], ["Done", tasks.filter(t => t.member === profileMember.name && t.status === "Done").length, "#3ECF9A"], ["In Progress", tasks.filter(t => t.member === profileMember.name && t.status === "In Progress").length, "#4F8CFF"], ["Overdue", tasks.filter(t => t.member === profileMember.name && isOverdue(t)).length, "#E85D5D"]].map(([label, value, color]) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    style: {
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 8,
+      padding: "10px 12px",
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 22,
+      fontWeight: 700,
+      color
+    }
+  }, value), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      color: "#8593A3",
+      marginTop: 2
+    }
+  }, label)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 8,
+      padding: "14px 16px",
+      marginBottom: 16
+    }
+  }, [["Team ID", profileMember.teamId, true], ["Email", profileMember.email || "—", canManageMembers || profileMember.id === currentMember?.id], ["Mobile", profileMember.mobile || "—", canManageMembers || profileMember.id === currentMember?.id], ["Joined", fmtDate(profileMember.joinedDate), true]].filter(([,, show]) => show).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      padding: "5px 0",
+      borderBottom: "1px solid #1F273322"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: "#5B6675"
+    }
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "mono",
+    style: {
+      fontSize: 12,
+      color: "#E8EDF2"
+    }
+  }, value)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#8593A3",
+      marginBottom: 8,
+      fontWeight: 600,
+      letterSpacing: .5,
+      textTransform: "uppercase"
+    }
+  }, "Tasks"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      maxHeight: 200,
+      overflowY: "auto"
+    }
+  }, tasks.filter(t => t.member === profileMember.name).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#3A424D",
+      padding: "10px 0"
+    }
+  }, "No tasks assigned.") : tasks.filter(t => t.member === profileMember.name).map(t => /*#__PURE__*/React.createElement("div", {
+    key: t.id,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "7px 10px",
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "mono",
+    style: {
+      fontSize: 11,
+      color: "#5B6675",
+      minWidth: 36
+    }
+  }, t.taskCode), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12.5,
+      flex: 1,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, t.task), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: STATUS_COLOR[t.status],
+      whiteSpace: "nowrap"
+    }
+  }, t.status)))))), view === "logs" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 1180,
+      margin: "0 auto",
+      padding: "0 24px 60px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 17,
+      fontWeight: 700
+    }
+  }, "Task Audit Log"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#8593A3",
+      marginTop: 2
+    }
+  }, "Permanent record — cannot be deleted or modified")), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: loadTaskLog,
+    style: {
+      background: "#1A222D",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "8px 14px",
+      fontSize: 12.5
+    }
+  }, "Refresh")), logLoading ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "60px 0",
+      color: "#8593A3"
+    }
+  }, "Loading log…") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 10,
+      overflow: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("table", {
+    style: {
+      fontSize: 12.5,
+      width: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      background: "#161D26",
+      textAlign: "left"
+    }
+  }, ["Date & Time", "Code", "Member", "Task", "Status", "Priority", "Action", "By"].map(h => /*#__PURE__*/React.createElement("th", {
+    key: h,
+    style: {
+      padding: "9px 12px",
+      fontSize: 10.5,
+      letterSpacing: .5,
+      color: "#8593A3",
+      fontWeight: 600,
+      whiteSpace: "nowrap"
+    }
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, taskLog.length === 0 ? /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    colSpan: "8",
+    style: {
+      padding: "60px 0",
+      textAlign: "center",
+      color: "#5B6675"
+    }
+  }, "No log entries yet. They appear once tasks are created or changed.")) : taskLog.map(l => {
+    const actionColor = l.action === "created" ? "#3ECF9A" : l.action === "deleted" ? "#E85D5D" : "#4F8CFF";
+    const rowOpacity = l.action === "deleted" ? 0.6 : 1;
+    return /*#__PURE__*/React.createElement("tr", {
+      key: l.id,
+      className: "rowhover",
+      style: {
+        borderTop: "1px solid #1F2733",
+        opacity: rowOpacity
+      }
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        padding: "9px 12px",
+        color: "#5B6675",
+        whiteSpace: "nowrap",
+        fontSize: 11
+      }
+    }, new Date(l.action_at).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    })), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        padding: "9px 12px",
+        color: "#5B6675"
+      }
+    }, l.task_code), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "9px 12px",
+        whiteSpace: "nowrap"
+      }
+    }, l.member), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "9px 12px",
+        maxWidth: 280,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, l.task), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "9px 12px",
+        whiteSpace: "nowrap",
+        color: STATUS_COLOR[l.status] || "#8593A3"
+      }
+    }, l.status), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "9px 12px",
+        whiteSpace: "nowrap",
+        color: PRIORITY_COLOR[l.priority] || "#8593A3"
+      }
+    }, l.priority), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "9px 12px"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        background: actionColor + "22",
+        color: actionColor,
+        borderRadius: 4,
+        padding: "2px 7px",
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: .5
+      }
+    }, l.action)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "9px 12px",
+        color: "#8593A3",
+        whiteSpace: "nowrap"
+      }
+    }, l.action_by || "—"));
+  }))))), modalOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
