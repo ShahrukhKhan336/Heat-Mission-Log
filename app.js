@@ -466,7 +466,7 @@ function App() {
   const [meetingFilter, setMeetingFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useState(true);
   const [hideDone, setHideDone] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
@@ -1086,15 +1086,15 @@ function App() {
     className: "btn",
     onClick: () => setShowDone(p => !p),
     style: {
-      background: showDone ? "#1A2A1A" : "#121821",
-      border: "1px solid " + (showDone ? "#3ECF9A55" : "#1F2733"),
-      color: showDone ? "#3ECF9A" : "#8593A3",
+      background: showDone ? "#121821" : "#1A1500",
+      border: "1px solid " + (showDone ? "#1F2733" : "#E8A33D55"),
+      color: showDone ? "#8593A3" : "#E8A33D",
       borderRadius: 6,
       padding: "8px 12px",
       fontSize: 12.5,
       whiteSpace: "nowrap"
     }
-  }, showDone ? "✓ Showing completed" : "Show completed"), /*#__PURE__*/React.createElement("div", {
+  }, showDone ? "Hide completed" : "Show completed"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       background: "#121821",
