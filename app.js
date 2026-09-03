@@ -662,7 +662,7 @@ function App() {
   const [logLoading, setLogLoading] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [viewMember, setViewMember] = useState(null);
-  const [view, setView] = useState("table");
+  const [view, setView] = useState("tasks");
   const [search, setSearch] = useState("");
   const [mf, setMf] = useState("All");
   const [mtf, setMtf] = useState("All");
@@ -1267,7 +1267,7 @@ function App() {
       borderRadius: 6,
       overflow: "hidden"
     }
-  }, ["table", "board", "members", "logs"].map(v => /*#__PURE__*/React.createElement("button", {
+  }, ["tasks", "board", "members", "logs"].map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
     className: "btn",
     onClick: () => setView(v),
@@ -1278,7 +1278,7 @@ function App() {
       color: view === v ? "#E8EDF2" : "#8593A3",
       fontSize: 12.5
     }
-  }, v[0].toUpperCase() + v.slice(1))))), view === "table" && /*#__PURE__*/React.createElement("div", {
+  }, v[0].toUpperCase() + v.slice(1))))), view === "tasks" && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#121821",
       border: "1px solid #1F2733",
