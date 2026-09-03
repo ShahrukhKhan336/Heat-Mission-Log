@@ -25,7 +25,8 @@ function rowToMember(r) {
     group: r.group_name,
     email: r.email || "",
     mobile: r.mobile || "",
-    joinedDate: r.joined_date || ""
+    joinedDate: r.joined_date || "",
+    isFinanceOfficer: r.is_finance_officer || false
   };
 }
 function rowToTask(r) {
@@ -798,6 +799,7 @@ function App() {
   }
   const canEdit = !!currentMember && (currentMember.group === "SPMT" || currentMember.group === "Faculty Advisors");
   const canManage = !!currentMember && currentMember.group === "SPMT";
+  const canFinance = !!currentMember && (currentMember.group === "SPMT" || currentMember.isFinanceOfficer === true);
 
   // Filtering — no useMemo to avoid stale closure issues
   const filtered = tasks.filter(t => {
@@ -1268,7 +1270,7 @@ function App() {
       borderRadius: 6,
       overflow: "hidden"
     }
-  }, (canManage ? ["tasks", "board", "members", "logs"] : ["tasks", "board", "members"]).map(v => /*#__PURE__*/React.createElement("button", {
+  }, [..."tasks,board,members".split(","), ...(canManage ? ["logs"] : []), canFinance ? ["finance"] : null].filter(Boolean).map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
     className: "btn",
     onClick: () => setView(v),
@@ -1683,7 +1685,8 @@ function App() {
         teamId: m.teamId,
         role: m.role || "Member",
         group: m.group,
-        joinedDate: m.joinedDate || ""
+        joinedDate: m.joinedDate || "",
+        isFinanceOfficer: m.isFinanceOfficer || false
       });
       setMEditId(m.id);
       setMFormErr("");
@@ -1847,7 +1850,37 @@ function App() {
         whiteSpace: "nowrap"
       }
     }, l.action_by || "—"));
-  })))))), modalOpen && /*#__PURE__*/React.createElement("div", {
+  })))))), view === "finance" && canFinance && /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 1180,
+      margin: "0 auto",
+      padding: "0 24px 60px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 18
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 22,
+      fontWeight: 700,
+      letterSpacing: -0.5
+    }
+  }, "Finance"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#8593A3",
+      marginTop: 4
+    }
+  }, "Salary · TA-DA · Committee · Deputation · Other Payments"))), /*#__PURE__*/React.createElement(FinanceView, {
+    currentMember: currentMember,
+    members: members,
+    canManage: canManage
+  })), modalOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
@@ -2309,7 +2342,34 @@ function App() {
       joinedDate: e.target.value
     }),
     style: iStyle
-  })), mFormErr && /*#__PURE__*/React.createElement("div", {
+  })), canManage && /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 0",
+      cursor: "pointer",
+      borderTop: "1px solid #1F2733",
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: mForm.isFinanceOfficer || false,
+    onChange: e => setMForm({
+      ...mForm,
+      isFinanceOfficer: e.target.checked
+    })
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 500
+    }
+  }, "Finance Officer"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: "#5B6675"
+    }
+  }, "Can access Finance tab, add payments and mark as paid"))), mFormErr && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
       fontSize: 12.5,
