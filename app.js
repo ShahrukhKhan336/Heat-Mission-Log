@@ -801,6 +801,7 @@ function App() {
 
   // Filtering — no useMemo to avoid stale closure issues
   const filtered = tasks.filter(t => {
+    if (t.status === "Done" && sf !== "Done") return false;
     if (mf !== "All" && t.member !== mf) return false;
     if (mtf !== "All" && t.meetingId !== mtf) return false;
     if (sf !== "All" && t.status !== sf) return false;
