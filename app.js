@@ -462,10 +462,12 @@ function App() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [view, setView] = useState("table");
   const [search, setSearch] = useState("");
-  const [memberFilter, setMemberFilter] = useState("All");
+  const [memberFilter, setMemberFilter] = useState("Active");
   const [meetingFilter, setMeetingFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
+  const [showDone, setShowDone] = useState(false);
+  const [hideDone, setHideDone] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskForm, setTaskForm] = useState({
@@ -731,16 +733,18 @@ function App() {
   const memberNames = useMemo(() => Array.from(new Set(tasks.map(t => t.member).filter(Boolean))).sort(), [tasks]);
   const meetings = useMemo(() => Array.from(new Set(tasks.map(t => t.meetingId).filter(Boolean))).sort(), [tasks]);
   const filtered = useMemo(() => tasks.filter(t => {
+    if (hideDone && t.status === "Done") return false;
     if (memberFilter !== "All" && t.member !== memberFilter) return false;
     if (meetingFilter !== "All" && t.meetingId !== meetingFilter) return false;
-    if (statusFilter !== "All" && t.status !== statusFilter) return false;
+    if (statusFilter === "Active" && t.status === "Done") return false;
+    if (statusFilter !== "Active" && statusFilter !== "All" && t.status !== statusFilter) return false;
     if (priorityFilter !== "All" && t.priority !== priorityFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       if (!(t.task + " " + t.member + " " + t.remarks + " " + t.meetingId).toLowerCase().includes(q)) return false;
     }
     return true;
-  }), [tasks, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
+  }), [tasks, hideDone, memberFilter, meetingFilter, statusFilter, priorityFilter, search]);
   const stats = useMemo(() => ({
     total: tasks.length,
     todo: tasks.filter(t => t.status === "To Do").length,
@@ -1073,12 +1077,24 @@ function App() {
   }), /*#__PURE__*/React.createElement(FilterSelect, {
     value: statusFilter,
     onChange: setStatusFilter,
-    options: ["All", ...STATUSES]
+    options: ["Active", "To Do", "In Progress", "Done", "All"]
   }), /*#__PURE__*/React.createElement(FilterSelect, {
     value: priorityFilter,
     onChange: setPriorityFilter,
     options: ["All", ...PRIORITIES]
-  }), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setShowDone(p => !p),
+    style: {
+      background: showDone ? "#1A2A1A" : "#121821",
+      border: "1px solid " + (showDone ? "#3ECF9A55" : "#1F2733"),
+      color: showDone ? "#3ECF9A" : "#8593A3",
+      borderRadius: 6,
+      padding: "8px 12px",
+      fontSize: 12.5,
+      whiteSpace: "nowrap"
+    }
+  }, showDone ? "✓ Showing completed" : "Show completed"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       background: "#121821",
@@ -1097,7 +1113,19 @@ function App() {
       color: view === v ? "#E8EDF2" : "#8593A3",
       fontSize: 12.5
     }
-  }, v[0].toUpperCase() + v.slice(1))))), view === "table" && /*#__PURE__*/React.createElement("div", {
+  }, v[0].toUpperCase() + v.slice(1)))), (view === "table" || view === "board") && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setHideDone(h => !h),
+    style: {
+      background: hideDone ? "#121821" : "#1A2D1A",
+      border: "1px solid " + (hideDone ? "#1F2733" : "#3ECF9A55"),
+      borderRadius: 6,
+      padding: "8px 12px",
+      color: hideDone ? "#5B6675" : "#3ECF9A",
+      fontSize: 12.5,
+      whiteSpace: "nowrap"
+    }
+  }, hideDone ? `Show completed (${tasks.filter(t => t.status === "Done").length})` : "Hide completed")), view === "table" && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#121821",
       border: "1px solid #1F2733",
@@ -1273,7 +1301,7 @@ function App() {
       gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
       gap: 14
     }
-  }, STATUSES.map(status => /*#__PURE__*/React.createElement("div", {
+  }, STATUSES.filter(s => s !== "Done" || statusFilter === "Done" || statusFilter === "All").map(status => /*#__PURE__*/React.createElement("div", {
     key: status
   }, /*#__PURE__*/React.createElement("div", {
     style: {
