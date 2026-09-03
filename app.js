@@ -1267,7 +1267,7 @@ function App() {
       borderRadius: 6,
       overflow: "hidden"
     }
-  }, ["tasks", "board", "members", "logs"].map(v => /*#__PURE__*/React.createElement("button", {
+  }, (canManage ? ["tasks", "board", "members", "logs"] : ["tasks", "board", "members"]).map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
     className: "btn",
     onClick: () => setView(v),
@@ -1449,7 +1449,20 @@ function App() {
       color: "#5B6675",
       fontSize: 13.5
     }
-  }, tasks.length === 0 ? "No tasks yet. Click + New Task to add one." : "No tasks match these filters.")), view === "board" && /*#__PURE__*/React.createElement("div", {
+  }, tasks.length === 0 ? "No tasks yet. Click + New Task to add one." : "No tasks match these filters."), sf !== "Done" && tasks.filter(t => t.status === "Done").length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "10px 0 14px",
+      fontSize: 12,
+      color: "#5B6675"
+    }
+  }, tasks.filter(t => t.status === "Done").length, " completed task", tasks.filter(t => t.status === "Done").length > 1 ? "s" : "", " hidden —", " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#4F8CFF",
+      cursor: "pointer"
+    },
+    onClick: () => setSf("Done")
+  }, "show completed"))), view === "board" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
@@ -1567,7 +1580,7 @@ function App() {
       background: "#161D26",
       textAlign: "left"
     }
-  }, ["Team ID", "Name", "Group", "Email", "Mobile", "Joined", "Assigned", "Done", ""].map(h => /*#__PURE__*/React.createElement("th", {
+  }, ["Team ID", "Name", "Group", "Total", "To Do", "In Progress", "Overdue", "Done", ""].map(h => /*#__PURE__*/React.createElement("th", {
     key: h,
     style: {
       padding: "10px 12px",
@@ -1629,13 +1642,31 @@ function App() {
     className: "mono",
     style: {
       padding: "10px 12px",
-      color: "#4F8CFF"
+      color: "#E8EDF2"
     }
   }, tasks.filter(t => t.member === m.name).length), /*#__PURE__*/React.createElement("td", {
     className: "mono",
     style: {
       padding: "10px 12px",
-      color: "#3ECF9A"
+      color: S_COLOR["To Do"]
+    }
+  }, tasks.filter(t => t.member === m.name && t.status === "To Do").length), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      padding: "10px 12px",
+      color: S_COLOR["In Progress"]
+    }
+  }, tasks.filter(t => t.member === m.name && t.status === "In Progress").length), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      padding: "10px 12px",
+      color: "#E85D5D"
+    }
+  }, tasks.filter(t => t.member === m.name && isOverdue(t)).length), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      padding: "10px 12px",
+      color: S_COLOR["Done"]
     }
   }, tasks.filter(t => t.member === m.name && t.status === "Done").length), /*#__PURE__*/React.createElement("td", {
     style: {
@@ -1684,7 +1715,7 @@ function App() {
       color: "#5B6675",
       fontSize: 13.5
     }
-  }, "No members yet.")), view === "logs" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "No members yet.")), view === "logs" && canManage && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
