@@ -1623,23 +1623,6 @@ function App() {
       color: "#8593A3"
     }
   }, m.group), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: "10px 12px",
-      color: "#8593A3"
-    }
-  }, m.email || "—"), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: "10px 12px",
-      color: "#8593A3",
-      whiteSpace: "nowrap"
-    }
-  }, m.mobile || "—"), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: "10px 12px",
-      color: "#8593A3",
-      whiteSpace: "nowrap"
-    }
-  }, fmtDate(m.joinedDate)), /*#__PURE__*/React.createElement("td", {
     className: "mono",
     style: {
       padding: "10px 12px",
