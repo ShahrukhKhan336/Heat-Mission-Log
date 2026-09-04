@@ -910,6 +910,7 @@ function App() {
   const [taskLog, setTaskLog] = useState([]);
   const [logLoading, setLogLoading] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [financeOpen, setFinanceOpen] = useState(false);
   const [viewMember, setViewMember] = useState(null);
   const [view, setView] = useState("tasks");
   const [search, setSearch] = useState("");
@@ -1284,7 +1285,64 @@ function App() {
       }
       setProfileOpen(false);
     }
-  }), viewMember && /*#__PURE__*/React.createElement(MemberProfileModal, {
+  }), financeOpen && canFinance && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "#0A0E14",
+      zIndex: 90,
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 1180,
+      margin: "0 auto",
+      padding: "24px 24px 60px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 22
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mono",
+    style: {
+      fontSize: 11,
+      letterSpacing: 2,
+      color: "#3ECF9A",
+      marginBottom: 6
+    }
+  }, "FINANCE MODULE"), /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 24,
+      fontWeight: 700,
+      letterSpacing: -0.5
+    }
+  }, "Finance"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#8593A3",
+      marginTop: 4
+    }
+  }, "Salary · TA-DA · Committee · Deputation · Other Payments")), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setFinanceOpen(false),
+    style: {
+      background: "#1A222D",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "9px 16px",
+      fontSize: 13
+    }
+  }, "← Back to Tasks")), /*#__PURE__*/React.createElement(FinanceView, {
+    currentMember: currentMember,
+    members: members,
+    canManage: canManage
+  }))), viewMember && /*#__PURE__*/React.createElement(MemberProfileModal, {
     member: viewMember,
     tasks: tasks,
     canManageMembers: canManage,
@@ -1350,7 +1408,19 @@ function App() {
       padding: "10px 14px",
       fontSize: 12.5
     }
-  }, "Profile"), canManage && /*#__PURE__*/React.createElement("button", {
+  }, "Profile"), canFinance && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setFinanceOpen(true),
+    style: {
+      background: "#0D2A1A",
+      border: "1px solid #3ECF9A44",
+      color: "#3ECF9A",
+      borderRadius: 6,
+      padding: "10px 14px",
+      fontSize: 12.5,
+      fontWeight: 600
+    }
+  }, "Finance"), canManage && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setMForm({
@@ -1518,7 +1588,7 @@ function App() {
       borderRadius: 6,
       overflow: "hidden"
     }
-  }, ["tasks", "board", "members", ...(canManage ? ["logs"] : []), ...(canFinance ? ["finance"] : [])].map(v => /*#__PURE__*/React.createElement("button", {
+  }, ["tasks", "board", "members", ...(canManage ? ["logs"] : [])].map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
     className: "btn",
     onClick: () => setView(v),
@@ -2098,37 +2168,7 @@ function App() {
         whiteSpace: "nowrap"
       }
     }, l.action_by || "—"));
-  })))))), view === "finance" && canFinance && /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxWidth: 1180,
-      margin: "0 auto",
-      padding: "0 24px 60px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 18
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "disp",
-    style: {
-      fontSize: 22,
-      fontWeight: 700,
-      letterSpacing: -0.5
-    }
-  }, "Finance"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12.5,
-      color: "#8593A3",
-      marginTop: 4
-    }
-  }, "Salary · TA-DA · Committee · Deputation · Other Payments"))), /*#__PURE__*/React.createElement(FinanceView, {
-    currentMember: currentMember,
-    members: members,
-    canManage: canManage
-  })), modalOpen && /*#__PURE__*/React.createElement("div", {
+  })))))), modalOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
