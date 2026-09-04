@@ -27,7 +27,10 @@ function rowToMember(r) {
     mobile: r.mobile || "",
     joinedDate: r.joined_date || "",
     isFinanceOfficer: r.is_finance_officer || false,
-    photoUrl: r.photo_url || ""
+    photoUrl: r.photo_url || "",
+    dob: r.date_of_birth || "",
+    addrPresent: r.address_present || "",
+    addrPermanent: r.address_permanent || ""
   };
 }
 function rowToTask(r) {
@@ -268,6 +271,10 @@ function ProfileModal({
   const [photoBusy, setPhotoBusy] = useState(false);
   const [email, setEmail] = useState(member.email);
   const [mobile, setMobile] = useState(member.mobile);
+  const [dob, setDob] = useState(member.dob || "");
+  const [addrP, setAddrP] = useState(member.addrPresent || "");
+  const [addrPerm, setAddrPerm] = useState(member.addrPermanent || "");
+  const [sameAddr, setSameAddr] = useState(false);
   const [newPw, setNewPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -350,7 +357,10 @@ function ProfileModal({
       } = await db.from("members").update({
         name: name.trim(),
         email: email.trim(),
-        mobile: mobile.trim()
+        mobile: mobile.trim(),
+        date_of_birth: dob || null,
+        address_present: addrP.trim(),
+        address_permanent: (sameAddr ? addrP : addrPerm).trim()
       }).eq("auth_user_id", user.id);
       if (e1) throw e1;
       if (newPw.trim()) {
@@ -557,6 +567,54 @@ function ProfileModal({
     placeholder: "01XXXXXXXXX",
     style: iStyle
   })), /*#__PURE__*/React.createElement(Field, {
+    label: "Date of Birth"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: dob,
+    onChange: e => setDob(e.target.value),
+    style: iStyle
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Present Address"
+  }, /*#__PURE__*/React.createElement("textarea", {
+    value: addrP,
+    onChange: e => setAddrP(e.target.value),
+    rows: "2",
+    placeholder: "House, Road, Area, City",
+    style: {
+      ...iStyle,
+      resize: "vertical"
+    }
+  })), /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 10,
+      cursor: "pointer",
+      fontSize: 12.5,
+      color: "#8593A3"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: sameAddr,
+    onChange: e => {
+      setSameAddr(e.target.checked);
+      if (e.target.checked) setAddrPerm(addrP);
+    }
+  }), "Permanent address is the same as present"), /*#__PURE__*/React.createElement(Field, {
+    label: "Permanent Address"
+  }, /*#__PURE__*/React.createElement("textarea", {
+    value: sameAddr ? addrP : addrPerm,
+    onChange: e => setAddrPerm(e.target.value),
+    rows: "2",
+    disabled: sameAddr,
+    placeholder: "Village, Upazila, District",
+    style: {
+      ...iStyle,
+      resize: "vertical",
+      opacity: sameAddr ? 0.5 : 1
+    }
+  })), /*#__PURE__*/React.createElement(Field, {
     label: "New Password (leave blank to keep current)"
   }, /*#__PURE__*/React.createElement("input", {
     type: "password",
@@ -588,7 +646,10 @@ function ProfileModal({
         contact: mobile.trim(),
         email: email.trim(),
         joined: member.joinedDate || "",
-        photo: photoUrl || ""
+        photo: photoUrl || "",
+        dob: dob || "",
+        addrPresent: addrP || "",
+        addrPermanent: (sameAddr ? addrP : addrPerm) || ""
       });
       window.open("id-card.html?" + q.toString(), "_blank");
     },
