@@ -26,7 +26,8 @@ function rowToMember(r) {
     email: r.email || "",
     mobile: r.mobile || "",
     joinedDate: r.joined_date || "",
-    isFinanceOfficer: r.is_finance_officer || false
+    isFinanceOfficer: r.is_finance_officer || false,
+    photoUrl: r.photo_url || ""
   };
 }
 function rowToTask(r) {
@@ -263,12 +264,77 @@ function ProfileModal({
   onSaved
 }) {
   const [name, setName] = useState(member.name);
+  const [photoUrl, setPhotoUrl] = useState(member.photoUrl || "");
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [email, setEmail] = useState(member.email);
   const [mobile, setMobile] = useState(member.mobile);
   const [newPw, setNewPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
+  async function uploadPhoto(file) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setErr("Photo must be under 2 MB.");
+      return;
+    }
+    setPhotoBusy(true);
+    setErr("");
+    setOk("");
+    try {
+      const ext = file.name.split(".").pop().toLowerCase();
+      const path = `${member.teamId}.${ext}`;
+      const {
+        error: upErr
+      } = await db.storage.from("member-photos").upload(path, file, {
+        upsert: true,
+        cacheControl: "3600"
+      });
+      if (upErr) throw upErr;
+      const {
+        data: {
+          publicUrl
+        }
+      } = db.storage.from("member-photos").getPublicUrl(path);
+      const bust = publicUrl + "?t=" + Date.now();
+      const {
+        data: {
+          user
+        }
+      } = await db.auth.getUser();
+      const {
+        error: dbErr
+      } = await db.from("members").update({
+        photo_url: bust
+      }).eq("auth_user_id", user.id);
+      if (dbErr) throw dbErr;
+      setPhotoUrl(bust);
+      setOk("Photo uploaded!");
+    } catch (e) {
+      setErr(e.message || "Photo upload failed.");
+    }
+    setPhotoBusy(false);
+  }
+  async function removePhoto() {
+    setPhotoBusy(true);
+    setErr("");
+    setOk("");
+    try {
+      const {
+        data: {
+          user
+        }
+      } = await db.auth.getUser();
+      await db.from("members").update({
+        photo_url: ""
+      }).eq("auth_user_id", user.id);
+      setPhotoUrl("");
+      setOk("Photo removed.");
+    } catch (e) {
+      setErr(e.message || "Failed.");
+    }
+    setPhotoBusy(false);
+  }
   async function save() {
     setBusy(true);
     setErr("");
@@ -375,7 +441,101 @@ function ProfileModal({
     style: {
       color: "#8593A3"
     }
-  }, member.group)), /*#__PURE__*/React.createElement(Field, {
+  }, member.group)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 14,
+      marginBottom: 16,
+      padding: "12px",
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 64,
+      height: 78,
+      borderRadius: 6,
+      background: "#161D26",
+      border: "1px solid #1F2733",
+      overflow: "hidden",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0
+    }
+  }, photoUrl ? /*#__PURE__*/React.createElement("img", {
+    src: photoUrl,
+    alt: "",
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  }) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 22,
+      color: "#3A424D"
+    }
+  }, "?")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      fontWeight: 500,
+      marginBottom: 3
+    }
+  }, "ID Card Photo"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: "#5B6675",
+      marginBottom: 8
+    }
+  }, "Passport style · Max 2 MB · JPG or PNG"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "btn",
+    style: {
+      background: "#1A2233",
+      border: "1px solid #2A3A55",
+      color: "#4F8CFF",
+      borderRadius: 5,
+      padding: "5px 12px",
+      fontSize: 11.5,
+      fontWeight: 600,
+      cursor: "pointer",
+      display: "inline-block"
+    }
+  }, photoBusy ? "Uploading…" : photoUrl ? "Change" : "Upload", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    disabled: photoBusy,
+    onChange: e => {
+      uploadPhoto(e.target.files[0]);
+      e.target.value = "";
+    },
+    style: {
+      display: "none"
+    }
+  })), photoUrl && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: removePhoto,
+    disabled: photoBusy,
+    style: {
+      background: "none",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 5,
+      padding: "5px 12px",
+      fontSize: 11.5
+    }
+  }, "Remove")))), /*#__PURE__*/React.createElement(Field, {
     label: "Name"
   }, /*#__PURE__*/React.createElement("input", {
     value: name,
@@ -427,7 +587,8 @@ function ProfileModal({
         team: "13860",
         contact: mobile.trim(),
         email: email.trim(),
-        joined: member.joinedDate || ""
+        joined: member.joinedDate || "",
+        photo: photoUrl || ""
       });
       window.open("id-card.html?" + q.toString(), "_blank");
     },
