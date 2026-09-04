@@ -734,6 +734,18 @@
     setVal('f-email',    p.get('email'));
     setVal('f-joined',   p.get('joined'));
 
+    // Load photo from Supabase Storage URL
+    const photoURL = p.get('photo');
+    if (photoURL) {
+      const img = $('photoImg'), empty = $('photoEmpty');
+      if (img) {
+        img.crossOrigin = 'anonymous';
+        img.onload  = function(){ img.style.display='block'; if(empty) empty.style.display='none'; };
+        img.onerror = function(){ if(empty) empty.style.display='block'; };
+        img.src = photoURL;
+      }
+    }
+
     sync();
   })();
 
