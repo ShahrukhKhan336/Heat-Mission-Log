@@ -1518,7 +1518,7 @@ function App() {
       borderRadius: 6,
       overflow: "hidden"
     }
-  }, [..."tasks,board,members".split(","), ...(canManage ? ["logs"] : []), canFinance ? ["finance"] : null].filter(Boolean).map(v => /*#__PURE__*/React.createElement("button", {
+  }, ["tasks", "board", "members", ...(canManage ? ["logs"] : []), ...(canFinance ? ["finance"] : [])].map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
     className: "btn",
     onClick: () => setView(v),
