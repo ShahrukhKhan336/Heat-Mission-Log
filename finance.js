@@ -1,6 +1,51 @@
 // finance.js — Finance module for Mission Log
 // Loaded before app.js. Defines global FinanceView component.
 
+// ── Module-scope constants & components (must be outside FinanceView
+//    so React does not remount inputs on every keystroke) ──────────
+const FIN_FREQUENCIES = ["Monthly", "Quarterly", "Triannual", "Half-yearly", "Yearly", "Custom"];
+const FIN_PAYMENT_TYPES = ["Salary", "TA-DA", "Committee", "Deputation", "Other"];
+const FIN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const finIStyle = {
+  width: "100%",
+  background: "#0A0E14",
+  border: "1px solid #1F2733",
+  borderRadius: 6,
+  padding: "8px 10px",
+  color: "#E8EDF2",
+  fontSize: 13
+};
+function FinField({
+  label,
+  children,
+  style
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 12,
+      ...style
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: "#8593A3",
+      marginBottom: 5
+    }
+  }, label), children);
+}
+function finFmtBDT(n) {
+  return n === null || n === undefined ? "—" : "৳ " + Number(n).toLocaleString();
+}
+function finFmtDate(s) {
+  if (!s) return "—";
+  const d = new Date(s + "T00:00:00");
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
 const FinanceView = ({
   currentMember,
   members,
@@ -11,49 +56,6 @@ const FinanceView = ({
     useEffect,
     useMemo
   } = React;
-  const FREQUENCIES = ["Monthly", "Quarterly", "Triannual", "Half-yearly", "Yearly", "Custom"];
-  const PAYMENT_TYPES = ["Salary", "TA-DA", "Committee", "Deputation", "Other"];
-  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const iStyle = {
-    width: "100%",
-    background: "#0A0E14",
-    border: "1px solid #1F2733",
-    borderRadius: 6,
-    padding: "8px 10px",
-    color: "#E8EDF2",
-    fontSize: 13
-  };
-  function Field({
-    label,
-    children,
-    style
-  }) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginBottom: 12,
-        ...style
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11.5,
-        color: "#8593A3",
-        marginBottom: 5
-      }
-    }, label), children);
-  }
-  function fmtBDT(n) {
-    return n === null || n === undefined ? "—" : "৳ " + Number(n).toLocaleString();
-  }
-  function fmtDate(s) {
-    if (!s) return "—";
-    const d = new Date(s + "T00:00:00");
-    if (isNaN(d)) return s;
-    return d.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
-  }
   const [tab, setTab] = useState("payroll");
   const [configs, setConfigs] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -231,7 +233,7 @@ const FinanceView = ({
 
   // ── Generate period salary payments ──────────────────────────
   function getPeriodLabel(freq, month, year) {
-    const mn = MONTHS[month].slice(0, 3);
+    const mn = FIN_MONTHS[month].slice(0, 3);
     if (freq === "Monthly") return `${mn} ${year}`;
     if (freq === "Quarterly") return `Q${Math.floor(month / 3) + 1} ${year}`;
     if (freq === "Triannual") return `T${Math.floor(month / 4) + 1} ${year}`;
@@ -313,7 +315,7 @@ const FinanceView = ({
       gap: 10,
       marginBottom: 20
     }
-  }, [["Total Unpaid", fmtBDT(totalUnpaid), "#E85D5D"], ["Total Paid", fmtBDT(totalPaid), "#3ECF9A"], ["Salary Configs", configs.length + " members", "#4F8CFF"], ["Payment Records", payments.length + " entries", "#E8EDF2"]].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+  }, [["Total Unpaid", finFmtBDT(totalUnpaid), "#E85D5D"], ["Total Paid", finFmtBDT(totalPaid), "#3ECF9A"], ["Salary Configs", configs.length + " members", "#4F8CFF"], ["Payment Records", payments.length + " entries", "#E8EDF2"]].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
     key: l,
     style: {
       background: "#121821",
@@ -484,7 +486,7 @@ const FinanceView = ({
       color: "#3ECF9A",
       fontWeight: 600
     }
-  }, fmtBDT(c.amount)), /*#__PURE__*/React.createElement("td", {
+  }, finFmtBDT(c.amount)), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: "10px 12px",
       color: "#5B6675",
@@ -592,7 +594,7 @@ const FinanceView = ({
     style: selStyle
   }, /*#__PURE__*/React.createElement("option", {
     value: "All"
-  }, "All Types"), PAYMENT_TYPES.map(t => /*#__PURE__*/React.createElement("option", {
+  }, "All Types"), FIN_PAYMENT_TYPES.map(t => /*#__PURE__*/React.createElement("option", {
     key: t
   }, t))), /*#__PURE__*/React.createElement("select", {
     value: fStatus,
@@ -690,7 +692,7 @@ const FinanceView = ({
         color: "#3ECF9A",
         fontWeight: 600
       }
-    }, fmtBDT(p.amount)), /*#__PURE__*/React.createElement("td", {
+    }, finFmtBDT(p.amount)), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 12px",
         color: "#5B6675",
@@ -720,7 +722,7 @@ const FinanceView = ({
         fontSize: 11,
         whiteSpace: "nowrap"
       }
-    }, fmtDate(p.paid_date)), /*#__PURE__*/React.createElement("td", {
+    }, finFmtDate(p.paid_date)), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 12px",
         whiteSpace: "nowrap"
@@ -810,7 +812,7 @@ const FinanceView = ({
       color: "#8593A3",
       fontSize: 16
     }
-  }, "×")), /*#__PURE__*/React.createElement(Field, {
+  }, "×")), /*#__PURE__*/React.createElement(FinField, {
     label: "Member"
   }, /*#__PURE__*/React.createElement("select", {
     value: cfgForm.memberId,
@@ -823,13 +825,13 @@ const FinanceView = ({
         groupName: m?.group || ""
       }));
     },
-    style: iStyle
+    style: finIStyle
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "— Select member —"), memberOptions.map(m => /*#__PURE__*/React.createElement("option", {
     key: m.id,
     value: m.id
-  }, m.name, " (", m.group, ")")))), /*#__PURE__*/React.createElement(Field, {
+  }, m.name, " (", m.group, ")")))), /*#__PURE__*/React.createElement(FinField, {
     label: "Payment Frequency"
   }, /*#__PURE__*/React.createElement("select", {
     value: cfgForm.frequency,
@@ -837,10 +839,10 @@ const FinanceView = ({
       ...f,
       frequency: e.target.value
     })),
-    style: iStyle
-  }, FREQUENCIES.map(f => /*#__PURE__*/React.createElement("option", {
+    style: finIStyle
+  }, FIN_FREQUENCIES.map(f => /*#__PURE__*/React.createElement("option", {
     key: f
-  }, f)))), /*#__PURE__*/React.createElement(Field, {
+  }, f)))), /*#__PURE__*/React.createElement(FinField, {
     label: "Amount (BDT)"
   }, /*#__PURE__*/React.createElement("input", {
     type: "number",
@@ -850,8 +852,8 @@ const FinanceView = ({
       amount: e.target.value
     })),
     placeholder: "e.g. 15000",
-    style: iStyle
-  })), /*#__PURE__*/React.createElement(Field, {
+    style: finIStyle
+  })), /*#__PURE__*/React.createElement(FinField, {
     label: "Notes (optional)"
   }, /*#__PURE__*/React.createElement("input", {
     value: cfgForm.notes,
@@ -860,7 +862,7 @@ const FinanceView = ({
       notes: e.target.value
     })),
     placeholder: "e.g. Basic pay per university grade",
-    style: iStyle
+    style: finIStyle
   })), cfgErr && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
@@ -943,7 +945,7 @@ const FinanceView = ({
       color: "#8593A3",
       fontSize: 16
     }
-  }, "×")), /*#__PURE__*/React.createElement(Field, {
+  }, "×")), /*#__PURE__*/React.createElement(FinField, {
     label: "Payment Type"
   }, /*#__PURE__*/React.createElement("select", {
     value: payForm.paymentType,
@@ -951,10 +953,10 @@ const FinanceView = ({
       ...f,
       paymentType: e.target.value
     })),
-    style: iStyle
-  }, PAYMENT_TYPES.map(t => /*#__PURE__*/React.createElement("option", {
+    style: finIStyle
+  }, FIN_PAYMENT_TYPES.map(t => /*#__PURE__*/React.createElement("option", {
     key: t
-  }, t)))), /*#__PURE__*/React.createElement(Field, {
+  }, t)))), /*#__PURE__*/React.createElement(FinField, {
     label: "Member"
   }, /*#__PURE__*/React.createElement("select", {
     value: payForm.memberId,
@@ -966,13 +968,13 @@ const FinanceView = ({
         memberName: m?.name || ""
       }));
     },
-    style: iStyle
+    style: finIStyle
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "— Select member —"), memberOptions.map(m => /*#__PURE__*/React.createElement("option", {
     key: m.id,
     value: m.id
-  }, m.name, " (", m.group, ")")))), /*#__PURE__*/React.createElement(Field, {
+  }, m.name, " (", m.group, ")")))), /*#__PURE__*/React.createElement(FinField, {
     label: "Period"
   }, /*#__PURE__*/React.createElement("input", {
     value: payForm.periodLabel,
@@ -981,8 +983,8 @@ const FinanceView = ({
       periodLabel: e.target.value
     })),
     placeholder: "e.g. Sep 2025, Q3 2025, T2 2025",
-    style: iStyle
-  })), /*#__PURE__*/React.createElement(Field, {
+    style: finIStyle
+  })), /*#__PURE__*/React.createElement(FinField, {
     label: "Amount (BDT)"
   }, /*#__PURE__*/React.createElement("input", {
     type: "number",
@@ -992,8 +994,8 @@ const FinanceView = ({
       amount: e.target.value
     })),
     placeholder: "e.g. 15000",
-    style: iStyle
-  })), /*#__PURE__*/React.createElement(Field, {
+    style: finIStyle
+  })), /*#__PURE__*/React.createElement(FinField, {
     label: "Description (optional)"
   }, /*#__PURE__*/React.createElement("input", {
     value: payForm.description,
@@ -1002,7 +1004,7 @@ const FinanceView = ({
       description: e.target.value
     })),
     placeholder: "e.g. TA-DA for field visit Sep 2025",
-    style: iStyle
+    style: finIStyle
   })), payErr && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
@@ -1098,7 +1100,7 @@ const FinanceView = ({
       gap: 10,
       marginBottom: 14
     }
-  }, /*#__PURE__*/React.createElement(Field, {
+  }, /*#__PURE__*/React.createElement(FinField, {
     label: "Month",
     style: {
       flex: 1
@@ -1106,11 +1108,11 @@ const FinanceView = ({
   }, /*#__PURE__*/React.createElement("select", {
     value: genMonth,
     onChange: e => setGenMonth(Number(e.target.value)),
-    style: iStyle
-  }, MONTHS.map((m, i) => /*#__PURE__*/React.createElement("option", {
+    style: finIStyle
+  }, FIN_MONTHS.map((m, i) => /*#__PURE__*/React.createElement("option", {
     key: m,
     value: i
-  }, m)))), /*#__PURE__*/React.createElement(Field, {
+  }, m)))), /*#__PURE__*/React.createElement(FinField, {
     label: "Year",
     style: {
       flex: 1
@@ -1118,7 +1120,7 @@ const FinanceView = ({
   }, /*#__PURE__*/React.createElement("select", {
     value: genYear,
     onChange: e => setGenYear(Number(e.target.value)),
-    style: iStyle
+    style: finIStyle
   }, [2025, 2026, 2027, 2028].map(y => /*#__PURE__*/React.createElement("option", {
     key: y
   }, y))))), /*#__PURE__*/React.createElement("div", {
