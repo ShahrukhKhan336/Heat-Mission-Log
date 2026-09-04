@@ -416,7 +416,33 @@ function ProfileModal({
       fontSize: 12.5,
       marginBottom: 10
     }
-  }, ok), /*#__PURE__*/React.createElement("div", {
+  }, ok), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      const q = new URLSearchParams({
+        name: name.trim(),
+        position: member.role || "",
+        idno: member.teamId,
+        teamname: member.group || "",
+        team: "13860",
+        contact: mobile.trim(),
+        email: email.trim(),
+        joined: member.joinedDate || ""
+      });
+      window.open("id-card.html?" + q.toString(), "_blank");
+    },
+    style: {
+      width: "100%",
+      background: "#1A2233",
+      border: "1px solid #2A3A55",
+      color: "#4F8CFF",
+      borderRadius: 6,
+      padding: "10px 0",
+      fontSize: 13.5,
+      fontWeight: 600,
+      marginBottom: 12
+    }
+  }, "Print ID Card"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
