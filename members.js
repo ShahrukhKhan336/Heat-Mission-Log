@@ -396,6 +396,7 @@ const MembersView = ({
   });
   const [histBusy, setHistBusy] = useState(false);
   const [histErr, setHistErr] = useState("");
+  const [histEditId, setHistEditId] = useState(null);
   function openAdd() {
     setForm({
       name: "",
@@ -479,6 +480,7 @@ const MembersView = ({
   function openHistory(m) {
     setHistOpen(m);
     setHistErr("");
+    setHistEditId(null);
     setHistForm({
       position: m.role || "Member",
       startDate: "",
@@ -487,26 +489,61 @@ const MembersView = ({
     });
     loadHistory(m.id);
   }
+  function editHistory(h) {
+    setHistEditId(h.id);
+    setHistErr("");
+    setHistForm({
+      position: h.position,
+      startDate: h.start_date || "",
+      endDate: h.end_date || "",
+      notes: h.notes || ""
+    });
+  }
+  function cancelHistEdit() {
+    setHistEditId(null);
+    setHistErr("");
+    setHistForm({
+      position: histOpen?.role || "Member",
+      startDate: "",
+      endDate: "",
+      notes: ""
+    });
+  }
   async function addHistory() {
     if (!histForm.position || !histForm.startDate) {
       setHistErr("Position and start date are required.");
       return;
     }
+    if (histForm.endDate && histForm.endDate < histForm.startDate) {
+      setHistErr("End date cannot be before start date.");
+      return;
+    }
     setHistBusy(true);
     setHistErr("");
     try {
-      const {
-        error
-      } = await db.from("role_history").insert({
-        member_id: histOpen.id,
-        member_name: histOpen.name,
+      const payload = {
         position: histForm.position,
         group_name: histOpen.group,
         start_date: histForm.startDate,
         end_date: histForm.endDate || null,
         notes: histForm.notes.trim()
-      });
+      };
+      let error;
+      if (histEditId !== null) {
+        ({
+          error
+        } = await db.from("role_history").update(payload).eq("id", histEditId));
+      } else {
+        ({
+          error
+        } = await db.from("role_history").insert({
+          ...payload,
+          member_id: histOpen.id,
+          member_name: histOpen.name
+        }));
+      }
       if (error) throw error;
+      setHistEditId(null);
       setHistForm({
         position: "Member",
         startDate: "",
@@ -771,6 +808,7 @@ const MembersView = ({
     }
   }, "No position history recorded yet.") : histRows.map(h => {
     const current = !h.end_date;
+    const editing = histEditId === h.id;
     return /*#__PURE__*/React.createElement("div", {
       key: h.id,
       style: {
@@ -778,8 +816,8 @@ const MembersView = ({
         alignItems: "center",
         gap: 10,
         padding: "9px 12px",
-        background: "#0A0E14",
-        border: "1px solid " + (current ? "#3ECF9A33" : "#1F2733"),
+        background: editing ? "#141C2B" : "#0A0E14",
+        border: "1px solid " + (editing ? "#4F8CFF66" : current ? "#3ECF9A33" : "#1F2733"),
         borderRadius: 6
       }
     }, /*#__PURE__*/React.createElement("span", {
@@ -807,12 +845,23 @@ const MembersView = ({
       style: {
         fontSize: 11,
         color: "#5B6675",
-        maxWidth: 150,
+        maxWidth: 130,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
       }
-    }, h.notes), canManage && /*#__PURE__*/React.createElement("button", {
+    }, h.notes), canManage && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => editHistory(h),
+      style: {
+        background: "none",
+        border: "none",
+        color: editing ? "#4F8CFF" : "#8593A3",
+        fontSize: 11.5,
+        padding: "0 4px",
+        fontWeight: editing ? 600 : 400
+      }
+    }, "Edit"), /*#__PURE__*/React.createElement("button", {
       className: "btn",
       onClick: () => deleteHistory(h.id),
       style: {
@@ -822,7 +871,7 @@ const MembersView = ({
         fontSize: 14,
         padding: "0 4px"
       }
-    }, "×"));
+    }, "×")));
   })), canManage && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#0A0E14",
@@ -833,13 +882,13 @@ const MembersView = ({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
-      color: "#8593A3",
+      color: histEditId ? "#4F8CFF" : "#8593A3",
       marginBottom: 12,
       fontWeight: 600,
       letterSpacing: .5,
       textTransform: "uppercase"
     }
-  }, "Add Position"), /*#__PURE__*/React.createElement(MemField, {
+  }, histEditId ? "Edit Position" : "Add Position"), /*#__PURE__*/React.createElement(MemField, {
     label: "Position"
   }, /*#__PURE__*/React.createElement("select", {
     value: histForm.position,
@@ -897,12 +946,29 @@ const MembersView = ({
       fontSize: 12.5,
       marginBottom: 10
     }
-  }, histErr), /*#__PURE__*/React.createElement("button", {
+  }, histErr), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, histEditId && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: cancelHistEdit,
+    style: {
+      flex: 1,
+      background: "transparent",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "9px 0",
+      fontSize: 13
+    }
+  }, "Cancel"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: addHistory,
     disabled: histBusy,
     style: {
-      width: "100%",
+      flex: histEditId ? 2 : 1,
       background: "#4F8CFF",
       border: "none",
       color: "#08111F",
@@ -911,7 +977,7 @@ const MembersView = ({
       fontSize: 13,
       fontWeight: 600
     }
-  }, histBusy ? "Adding…" : "Add Position")))), modalOpen && /*#__PURE__*/React.createElement("div", {
+  }, histBusy ? "Saving…" : histEditId ? "Save Changes" : "Add Position"))))), modalOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
