@@ -5,7 +5,7 @@ const {
 } = React;
 const STATUSES = ["To Do", "In Progress", "Done"];
 const PRIORITIES = ["High", "Medium", "Low"];
-const GROUPS = ["SPMT", "Faculty Advisors", "RA", "Other Officer", "Staff", "Student"];
+const GROUPS = ["SPMT", "Faculty Advisors", "RA", "Other Officer", "Staff", "Student", "UATFS"];
 const S_COLOR = {
   "To Do": "#8593A3",
   "In Progress": "#4F8CFF",
