@@ -4,7 +4,7 @@
 // ── Module-scope constants & components (must be outside FinanceView
 //    so React does not remount inputs on every keystroke) ──────────
 const FIN_FREQUENCIES = ["Monthly", "Quarterly", "Triannual", "Half-yearly", "Yearly", "Custom"];
-const FIN_PAYMENT_TYPES = ["Salary", "TA-DA", "Committee", "Deputation", "Other"];
+const FIN_PAYMENT_TYPES = ["Salary", "TA-DA", "Committee", "Deputation", "Procurement", "Other"];
 const FIN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const finIStyle = {
   width: "100%",
@@ -672,8 +672,8 @@ const FinanceView = ({
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        background: p.payment_type === "Salary" ? "#1A2233" : "#1A1500",
-        color: p.payment_type === "Salary" ? "#4F8CFF" : "#E8A33D",
+        background: p.payment_type === "Salary" ? "#1A2233" : p.payment_type === "Procurement" ? "#2A1A33" : "#1A1500",
+        color: p.payment_type === "Salary" ? "#4F8CFF" : p.payment_type === "Procurement" ? "#B07FE8" : "#E8A33D",
         borderRadius: 4,
         padding: "2px 7px",
         fontSize: 11.5,
