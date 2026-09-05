@@ -1094,7 +1094,7 @@ function App() {
   }, "← Back to Tasks")), /*#__PURE__*/React.createElement(FinanceView, {
     currentMember: currentMember,
     members: members,
-    canManage: canManage
+    canManage: canFinance
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 1180,

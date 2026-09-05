@@ -3,6 +3,7 @@
 // Module-scope helpers (outside components) so inputs keep focus while typing.
 
 const MEM_GROUPS = ["SPMT", "Faculty Advisors", "RA", "Other Officer", "Staff", "Student", "UATFS"];
+const MEM_POSITIONS = ["SPM", "ASPM", "Member", "Faculty Advisor", "RA", "Head of UATFS", "Finance Officer", "Procurement Officer", "Project Officer", "Staff", "Student", "Other"];
 const MEM_S_COLOR = {
   "To Do": "#8593A3",
   "In Progress": "#4F8CFF",
@@ -57,7 +58,22 @@ function MemberProfileModal({
   tasks,
   onClose
 }) {
+  const {
+    useState,
+    useEffect
+  } = React;
   const myTasks = tasks.filter(t => t.member === member.name);
+  const [history, setHistory] = useState([]);
+  useEffect(() => {
+    db.from("role_history").select("*").eq("member_id", member.id).order("start_date", {
+      ascending: false
+    }).then(({
+      data,
+      error
+    }) => {
+      if (!error) setHistory(data || []);
+    });
+  }, [member.id]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -231,7 +247,60 @@ function MemberProfileModal({
       color: "#E8EDF2",
       lineHeight: 1.5
     }
-  }, member.addrPermanent))), /*#__PURE__*/React.createElement("div", {
+  }, member.addrPermanent))), history.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#8593A3",
+      marginBottom: 8,
+      fontWeight: 600,
+      letterSpacing: .5,
+      textTransform: "uppercase"
+    }
+  }, "Position History"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      marginBottom: 16
+    }
+  }, history.map(h => {
+    const current = !h.end_date;
+    return /*#__PURE__*/React.createElement("div", {
+      key: h.id,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 10px",
+        background: "#0A0E14",
+        border: "1px solid " + (current ? "#3ECF9A33" : "#1F2733"),
+        borderRadius: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        background: current ? "#0D2A1A" : "#1A222D",
+        color: current ? "#3ECF9A" : "#8593A3",
+        borderRadius: 4,
+        padding: "2px 8px",
+        fontSize: 11,
+        fontWeight: 600,
+        whiteSpace: "nowrap"
+      }
+    }, h.position), /*#__PURE__*/React.createElement("span", {
+      className: "mono",
+      style: {
+        fontSize: 11,
+        color: "#5B6675",
+        flex: 1
+      }
+    }, memFmtDate(h.start_date), " — ", h.end_date ? memFmtDate(h.end_date) : "present"), current && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: "#3ECF9A",
+        fontWeight: 600
+      }
+    }, "CURRENT"));
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: "#8593A3",
@@ -315,6 +384,18 @@ const MembersView = ({
   const [formErr, setFormErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [delId, setDelId] = useState(null);
+
+  // Role history
+  const [histOpen, setHistOpen] = useState(null); // member being edited
+  const [histRows, setHistRows] = useState([]);
+  const [histForm, setHistForm] = useState({
+    position: "Member",
+    startDate: "",
+    endDate: "",
+    notes: ""
+  });
+  const [histBusy, setHistBusy] = useState(false);
+  const [histErr, setHistErr] = useState("");
   function openAdd() {
     setForm({
       name: "",
@@ -385,6 +466,62 @@ const MembersView = ({
     await db.from("members").delete().eq("id", id);
     setDelId(null);
     await onReload();
+  }
+  async function loadHistory(memberId) {
+    const {
+      data,
+      error
+    } = await db.from("role_history").select("*").eq("member_id", memberId).order("start_date", {
+      ascending: false
+    });
+    if (!error) setHistRows(data || []);
+  }
+  function openHistory(m) {
+    setHistOpen(m);
+    setHistErr("");
+    setHistForm({
+      position: m.role || "Member",
+      startDate: "",
+      endDate: "",
+      notes: ""
+    });
+    loadHistory(m.id);
+  }
+  async function addHistory() {
+    if (!histForm.position || !histForm.startDate) {
+      setHistErr("Position and start date are required.");
+      return;
+    }
+    setHistBusy(true);
+    setHistErr("");
+    try {
+      const {
+        error
+      } = await db.from("role_history").insert({
+        member_id: histOpen.id,
+        member_name: histOpen.name,
+        position: histForm.position,
+        group_name: histOpen.group,
+        start_date: histForm.startDate,
+        end_date: histForm.endDate || null,
+        notes: histForm.notes.trim()
+      });
+      if (error) throw error;
+      setHistForm({
+        position: "Member",
+        startDate: "",
+        endDate: "",
+        notes: ""
+      });
+      await loadHistory(histOpen.id);
+    } catch (e) {
+      setHistErr(e.message || "Failed.");
+    }
+    setHistBusy(false);
+  }
+  async function deleteHistory(id) {
+    await db.from("role_history").delete().eq("id", id);
+    await loadHistory(histOpen.id);
   }
   const count = (name, status) => status ? tasks.filter(t => t.member === name && t.status === status).length : tasks.filter(t => t.member === name && memIsOverdue(t)).length;
   return /*#__PURE__*/React.createElement(React.Fragment, null, viewMember && /*#__PURE__*/React.createElement(MemberProfileModal, {
@@ -529,6 +666,17 @@ const MembersView = ({
     onClick: e => e.stopPropagation()
   }, canManage && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     className: "btn",
+    onClick: () => openHistory(m),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#B07FE8",
+      padding: 4,
+      marginRight: 4,
+      fontSize: 12
+    }
+  }, "History"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
     onClick: () => openEdit(m),
     style: {
       background: "none",
@@ -555,7 +703,215 @@ const MembersView = ({
       color: "#5B6675",
       fontSize: 13.5
     }
-  }, "No members yet.")), modalOpen && /*#__PURE__*/React.createElement("div", {
+  }, "No members yet.")), histOpen && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,.65)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 70,
+      padding: 16
+    },
+    onClick: () => setHistOpen(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 10,
+      width: "100%",
+      maxWidth: 560,
+      padding: 22,
+      maxHeight: "88vh",
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 18
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 16,
+      fontWeight: 700
+    }
+  }, "Position History"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#8593A3",
+      marginTop: 2
+    }
+  }, histOpen.name, " · ", histOpen.teamId)), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setHistOpen(null),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#8593A3",
+      fontSize: 18
+    }
+  }, "×")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      marginBottom: 18
+    }
+  }, histRows.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: "#3A424D",
+      padding: "14px 0",
+      textAlign: "center"
+    }
+  }, "No position history recorded yet.") : histRows.map(h => {
+    const current = !h.end_date;
+    return /*#__PURE__*/React.createElement("div", {
+      key: h.id,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "9px 12px",
+        background: "#0A0E14",
+        border: "1px solid " + (current ? "#3ECF9A33" : "#1F2733"),
+        borderRadius: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        background: current ? "#0D2A1A" : "#1A222D",
+        color: current ? "#3ECF9A" : "#8593A3",
+        borderRadius: 4,
+        padding: "2px 9px",
+        fontSize: 11.5,
+        fontWeight: 600,
+        whiteSpace: "nowrap"
+      }
+    }, h.position), /*#__PURE__*/React.createElement("span", {
+      className: "mono",
+      style: {
+        fontSize: 11.5,
+        color: "#8593A3",
+        flex: 1
+      }
+    }, memFmtDate(h.start_date), " — ", h.end_date ? memFmtDate(h.end_date) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: "#3ECF9A"
+      }
+    }, "present")), h.notes && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: "#5B6675",
+        maxWidth: 150,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, h.notes), canManage && /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => deleteHistory(h.id),
+      style: {
+        background: "none",
+        border: "none",
+        color: "#5B6675",
+        fontSize: 14,
+        padding: "0 4px"
+      }
+    }, "×"));
+  })), canManage && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 8,
+      padding: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#8593A3",
+      marginBottom: 12,
+      fontWeight: 600,
+      letterSpacing: .5,
+      textTransform: "uppercase"
+    }
+  }, "Add Position"), /*#__PURE__*/React.createElement(MemField, {
+    label: "Position"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: histForm.position,
+    onChange: e => setHistForm({
+      ...histForm,
+      position: e.target.value
+    }),
+    style: memIStyle
+  }, MEM_POSITIONS.map(p => /*#__PURE__*/React.createElement("option", {
+    key: p
+  }, p)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement(MemField, {
+    label: "Start Date",
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: histForm.startDate,
+    onChange: e => setHistForm({
+      ...histForm,
+      startDate: e.target.value
+    }),
+    style: memIStyle
+  })), /*#__PURE__*/React.createElement(MemField, {
+    label: "End Date (blank = current)",
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: histForm.endDate,
+    onChange: e => setHistForm({
+      ...histForm,
+      endDate: e.target.value
+    }),
+    style: memIStyle
+  }))), /*#__PURE__*/React.createElement(MemField, {
+    label: "Notes (optional)"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: histForm.notes,
+    onChange: e => setHistForm({
+      ...histForm,
+      notes: e.target.value
+    }),
+    placeholder: "e.g. 3 honorarium installments drawn",
+    style: memIStyle
+  })), histErr && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#E85D5D",
+      fontSize: 12.5,
+      marginBottom: 10
+    }
+  }, histErr), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: addHistory,
+    disabled: histBusy,
+    style: {
+      width: "100%",
+      background: "#4F8CFF",
+      border: "none",
+      color: "#08111F",
+      borderRadius: 6,
+      padding: "9px 0",
+      fontSize: 13,
+      fontWeight: 600
+    }
+  }, histBusy ? "Adding…" : "Add Position")))), modalOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
