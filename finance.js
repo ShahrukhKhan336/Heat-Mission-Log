@@ -4,7 +4,49 @@
 // ── Module-scope constants & components (must be outside FinanceView
 //    so React does not remount inputs on every keystroke) ──────────
 const FIN_FREQUENCIES = ["Monthly", "Quarterly", "Triannual", "Half-yearly", "Yearly", "Custom"];
-const FIN_PAYMENT_TYPES = ["Salary", "TA-DA", "Committee", "Deputation", "Procurement", "Other"];
+const FIN_PAYMENT_TYPES = ["Salary", "Honorarium", "TA-DA", "Committee", "Deputation", "Procurement", "Other"];
+
+// ── Project timeline ──────────────────────────────────────────────
+const PROJECT_START = new Date(2025, 7, 27); // 27 August 2025
+const PROJECT_END = new Date(2028, 7, 27); // 27 August 2028
+
+// Default honorarium cadence per role (ATFOM Annex 11 split into installments)
+const HONORARIUM_CADENCE = {
+  "SPM": {
+    months: 3,
+    label: "Every 3 months (4 × 1 month basic / year)"
+  },
+  "ASPM": {
+    months: 6,
+    label: "Half-yearly (2 × 1 month basic / year)"
+  },
+  "Member": {
+    months: 12,
+    label: "Yearly (1 × 1 month basic / year)"
+  },
+  "UATFS": {
+    months: 12,
+    label: "Yearly block allocation"
+  }
+};
+
+// Build the full honorarium schedule from project start to end
+function buildHonorariumSchedule(intervalMonths) {
+  const out = [];
+  let d = new Date(PROJECT_START);
+  while (d <= PROJECT_END) {
+    out.push(new Date(d));
+    d = new Date(d.getFullYear(), d.getMonth() + intervalMonths, d.getDate());
+  }
+  return out;
+}
+function honPeriodLabel(date) {
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
 const FIN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const finIStyle = {
   width: "100%",
@@ -103,6 +145,23 @@ const FinanceView = ({
   // Delete confirms
   const [delCfgId, setDelCfgId] = useState(null);
   const [delPayId, setDelPayId] = useState(null);
+
+  // Honorarium
+  const [honModal, setHonModal] = useState(false);
+  const [honEdit, setHonEdit] = useState(null);
+  const [honForm, setHonForm] = useState({
+    memberId: "",
+    memberName: "",
+    groupName: "",
+    cadence: "Member",
+    amount: "",
+    paidCount: "0",
+    notes: ""
+  });
+  const [honBusy, setHonBusy] = useState(false);
+  const [honErr, setHonErr] = useState("");
+  const [genHonBusy, setGenHonBusy] = useState(false);
+  const [genHonMsg, setGenHonMsg] = useState("");
   useEffect(() => {
     loadAll();
   }, []);
@@ -147,7 +206,8 @@ const FinanceView = ({
         group_name: cfgForm.groupName,
         frequency: cfgForm.frequency,
         amount: Number(cfgForm.amount),
-        notes: cfgForm.notes.trim()
+        notes: cfgForm.notes.trim(),
+        config_type: "Salary"
       };
       let error;
       if (cfgEdit) {
@@ -252,7 +312,7 @@ const FinanceView = ({
   async function generatePeriod() {
     setGenBusy(true);
     setGenMsg("");
-    const matching = configs.filter(c => c.active && periodMatches(c.frequency, genMonth));
+    const matching = salConfigs.filter(c => c.active && periodMatches(c.frequency, genMonth));
     if (matching.length === 0) {
       setGenMsg("No members have a salary frequency matching this period.");
       setGenBusy(false);
@@ -280,6 +340,239 @@ const FinanceView = ({
     setGenMsg(`${created} payment record${created !== 1 ? "s" : ""} created. ${matching.length - created} already existed.`);
     await reloadPayments();
     setGenBusy(false);
+  }
+
+  // ── Honorarium operations ─────────────────────────────────────
+  const honConfigs = configs.filter(c => c.config_type === "Honorarium");
+  const salConfigs = configs.filter(c => c.config_type !== "Honorarium");
+  async function saveHon() {
+    if (!honForm.memberId || !honForm.amount) {
+      setHonErr("Member and amount are required.");
+      return;
+    }
+    setHonBusy(true);
+    setHonErr("");
+    try {
+      const cad = HONORARIUM_CADENCE[honForm.cadence];
+      const freq = cad.months === 3 ? "Quarterly" : cad.months === 6 ? "Half-yearly" : "Yearly";
+      const payload = {
+        member_id: Number(honForm.memberId),
+        member_name: honForm.memberName,
+        group_name: honForm.groupName,
+        frequency: freq,
+        amount: Number(honForm.amount),
+        config_type: "Honorarium",
+        notes: honForm.cadence + " | already paid: " + (honForm.paidCount || "0") + (honForm.notes ? " | " + honForm.notes.trim() : "")
+      };
+      let error;
+      if (honEdit) {
+        ({
+          error
+        } = await db.from("salary_config").update(payload).eq("id", honEdit.id));
+      } else {
+        ({
+          error
+        } = await db.from("salary_config").insert(payload));
+      }
+      if (error) throw error;
+      setHonModal(false);
+      await reloadConfigs();
+    } catch (e) {
+      setHonErr(e.message || "Failed.");
+    }
+    setHonBusy(false);
+  }
+  function cadenceOf(cfg) {
+    const m = (cfg.notes || "").match(/^(SPM|ASPM|Member|UATFS)/);
+    return m ? m[1] : "Member";
+  }
+  function paidCountOf(cfg) {
+    const m = (cfg.notes || "").match(/already paid:\s*(\d+)/);
+    return m ? Number(m[1]) : 0;
+  }
+  async function generateHonorarium() {
+    setGenHonBusy(true);
+    setGenHonMsg("");
+    if (honConfigs.length === 0) {
+      setGenHonMsg("No honorarium configs set up yet.");
+      setGenHonBusy(false);
+      return;
+    }
+    let created = 0,
+      marked = 0;
+    for (const c of honConfigs) {
+      const cad = HONORARIUM_CADENCE[cadenceOf(c)] || HONORARIUM_CADENCE["Member"];
+      const schedule = buildHonorariumSchedule(cad.months);
+      const alreadyPaid = paidCountOf(c);
+      for (let i = 0; i < schedule.length; i++) {
+        const label = honPeriodLabel(schedule[i]);
+        const {
+          data: existing
+        } = await db.from("payments").select("id").eq("member_id", c.member_id).eq("period_label", label).eq("payment_type", "Honorarium");
+        if (existing && existing.length > 0) continue;
+        const isPaid = i < alreadyPaid;
+        await db.from("payments").insert({
+          payment_type: "Honorarium",
+          member_id: c.member_id,
+          member_name: c.member_name,
+          period_label: label,
+          amount: c.amount,
+          description: "Honorarium — " + cadenceOf(c) + " (installment " + (i + 1) + " of " + schedule.length + ")",
+          status: isPaid ? "Paid" : "Unpaid",
+          paid_date: isPaid ? schedule[i].toISOString().slice(0, 10) : null,
+          paid_by: isPaid ? "Recorded from history" : ""
+        });
+        created++;
+        if (isPaid) marked++;
+      }
+    }
+    setGenHonMsg(created + " honorarium record" + (created !== 1 ? "s" : "") + " created (" + marked + " marked as already paid).");
+    await reloadPayments();
+    setGenHonBusy(false);
+  }
+
+  // ── Excel export ──────────────────────────────────────────────
+  function exportExcel() {
+    if (typeof XLSX === "undefined") {
+      alert("Excel library not loaded. Refresh the page.");
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+    const today = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+
+    // Sheet 1 — Summary
+    const byType = {};
+    payments.forEach(p => {
+      const k = p.payment_type;
+      if (!byType[k]) byType[k] = {
+        type: k,
+        count: 0,
+        paid: 0,
+        unpaid: 0,
+        total: 0
+      };
+      byType[k].count++;
+      byType[k].total += Number(p.amount);
+      if (p.status === "Paid") byType[k].paid += Number(p.amount);else byType[k].unpaid += Number(p.amount);
+    });
+    const summary = [["HEAT Sub-Project — Finance Summary"], ["Project PIN 13860 · Generated " + today], [], ["Payment Type", "Records", "Paid (BDT)", "Unpaid (BDT)", "Total (BDT)"], ...Object.values(byType).map(r => [r.type, r.count, r.paid, r.unpaid, r.total]), [], ["GRAND TOTAL", payments.length, totalPaid, totalUnpaid, totalPaid + totalUnpaid]];
+    const ws1 = XLSX.utils.aoa_to_sheet(summary);
+    ws1["!cols"] = [{
+      wch: 22
+    }, {
+      wch: 10
+    }, {
+      wch: 16
+    }, {
+      wch: 16
+    }, {
+      wch: 16
+    }];
+    XLSX.utils.book_append_sheet(wb, ws1, "Summary");
+
+    // Sheet 2 — All payments
+    const ws2 = XLSX.utils.json_to_sheet(payments.map(p => ({
+      "Date Created": new Date(p.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }),
+      "Member": p.member_name,
+      "Type": p.payment_type,
+      "Period": p.period_label,
+      "Amount (BDT)": Number(p.amount),
+      "Description": p.description || "",
+      "Status": p.status,
+      "Paid On": p.paid_date ? new Date(p.paid_date).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }) : "",
+      "Paid By": p.paid_by || ""
+    })));
+    ws2["!cols"] = [{
+      wch: 14
+    }, {
+      wch: 26
+    }, {
+      wch: 14
+    }, {
+      wch: 14
+    }, {
+      wch: 14
+    }, {
+      wch: 32
+    }, {
+      wch: 10
+    }, {
+      wch: 14
+    }, {
+      wch: 20
+    }];
+    XLSX.utils.book_append_sheet(wb, ws2, "All Payments");
+
+    // Sheet 3 — Salary config
+    const ws3 = XLSX.utils.json_to_sheet(configs.map(c => ({
+      "Member": c.member_name,
+      "Group": c.group_name,
+      "Frequency": c.frequency,
+      "Amount (BDT)": Number(c.amount),
+      "Notes": c.notes || "",
+      "Active": c.active ? "Yes" : "No"
+    })));
+    ws3["!cols"] = [{
+      wch: 26
+    }, {
+      wch: 18
+    }, {
+      wch: 14
+    }, {
+      wch: 14
+    }, {
+      wch: 32
+    }, {
+      wch: 8
+    }];
+    XLSX.utils.book_append_sheet(wb, ws3, "Salary Config");
+
+    // Sheet 4 — Per member breakdown
+    const byMember = {};
+    payments.forEach(p => {
+      const k = p.member_name;
+      if (!byMember[k]) byMember[k] = {
+        name: k,
+        records: 0,
+        paid: 0,
+        unpaid: 0
+      };
+      byMember[k].records++;
+      if (p.status === "Paid") byMember[k].paid += Number(p.amount);else byMember[k].unpaid += Number(p.amount);
+    });
+    const ws4 = XLSX.utils.json_to_sheet(Object.values(byMember).map(m => ({
+      "Member": m.name,
+      "Records": m.records,
+      "Paid (BDT)": m.paid,
+      "Unpaid (BDT)": m.unpaid,
+      "Total (BDT)": m.paid + m.unpaid
+    })));
+    ws4["!cols"] = [{
+      wch: 26
+    }, {
+      wch: 10
+    }, {
+      wch: 16
+    }, {
+      wch: 16
+    }, {
+      wch: 16
+    }];
+    XLSX.utils.book_append_sheet(wb, ws4, "By Member");
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `HEAT_Finance_${stamp}.xlsx`);
   }
 
   // ── Derived ───────────────────────────────────────────────────
@@ -347,7 +640,7 @@ const FinanceView = ({
       overflow: "hidden",
       width: "fit-content"
     }
-  }, ["payroll", "payments"].map(t => /*#__PURE__*/React.createElement("button", {
+  }, ["payroll", "honorarium", "payments"].map(t => /*#__PURE__*/React.createElement("button", {
     key: t,
     className: "btn",
     onClick: () => setTab(t),
@@ -450,7 +743,7 @@ const FinanceView = ({
       fontWeight: 600,
       whiteSpace: "nowrap"
     }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, configs.map(c => /*#__PURE__*/React.createElement("tr", {
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, salConfigs.map(c => /*#__PURE__*/React.createElement("tr", {
     key: c.id,
     className: "rowhover",
     style: {
@@ -530,14 +823,266 @@ const FinanceView = ({
       padding: 4,
       fontSize: 12
     }
-  }, "Delete")))))), configs.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Delete")))))), salConfigs.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "50px 0",
       color: "#5B6675",
       fontSize: 13.5
     }
-  }, "No salary configs yet. Click \"+ Add Salary\" to start."))), tab === "payments" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "No salary configs yet. Click \"+ Add Salary\" to start."))), tab === "honorarium" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+      flexWrap: "wrap",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 16,
+      fontWeight: 700
+    }
+  }, "Honorarium"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#8593A3",
+      marginTop: 2
+    }
+  }, "ATFOM Annex 11 · Project period 27 Aug 2025 – 27 Aug 2028")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setGenHonMsg("");
+      generateHonorarium();
+    },
+    disabled: genHonBusy,
+    style: {
+      background: "#1A222D",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "9px 14px",
+      fontSize: 12.5
+    }
+  }, genHonBusy ? "Generating…" : "Generate Schedule"), canManage && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setHonForm({
+        memberId: "",
+        memberName: "",
+        groupName: "",
+        cadence: "Member",
+        amount: "",
+        paidCount: "0",
+        notes: ""
+      });
+      setHonEdit(null);
+      setHonErr("");
+      setHonModal(true);
+    },
+    style: {
+      background: "#4F8CFF",
+      border: "none",
+      color: "#08111F",
+      borderRadius: 6,
+      padding: "9px 14px",
+      fontSize: 13,
+      fontWeight: 600
+    }
+  }, "+ Add Honorarium"))), genHonMsg && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0D2A1A",
+      border: "1px solid #3ECF9A44",
+      color: "#3ECF9A",
+      borderRadius: 6,
+      padding: "10px 14px",
+      marginBottom: 14,
+      fontSize: 12.5
+    }
+  }, genHonMsg), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 8,
+      padding: "12px 16px",
+      marginBottom: 16,
+      fontSize: 12,
+      color: "#5B6675",
+      lineHeight: 1.8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3",
+      fontWeight: 600
+    }
+  }, "Entitlement per ATFOM Annex 11 —"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, "SPM"), " 4 months' basic salary/year → 1 month every 3 months \xA0·\xA0", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, "ASPM"), " 2 months'/year → 1 month half-yearly", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, "SPMT Member"), " 1 month's/year → 1 month yearly \xA0·\xA0", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8593A3"
+    }
+  }, "UATFS"), " yearly block allocation", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#5B6675",
+      fontStyle: "italic"
+    }
+  }, "Paid upon submission of annual progress report. Total ceiling BDT 2.5M or 10% of sub-project cost, whichever is lower.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 10,
+      overflow: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("table", {
+    style: {
+      fontSize: 13,
+      width: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      background: "#161D26",
+      textAlign: "left"
+    }
+  }, ["Member", "Group", "Cadence", "Per Installment", "Total Installments", "Paid", "Remaining", ""].map(h => /*#__PURE__*/React.createElement("th", {
+    key: h,
+    style: {
+      padding: "10px 12px",
+      fontSize: 11,
+      letterSpacing: .5,
+      color: "#8593A3",
+      fontWeight: 600,
+      whiteSpace: "nowrap"
+    }
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, honConfigs.map(c => {
+    const cadKey = cadenceOf(c);
+    const cad = HONORARIUM_CADENCE[cadKey] || HONORARIUM_CADENCE["Member"];
+    const total = buildHonorariumSchedule(cad.months).length;
+    const paid = payments.filter(p => p.payment_type === "Honorarium" && p.member_id === c.member_id && p.status === "Paid").length || paidCountOf(c);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: c.id,
+      className: "rowhover",
+      style: {
+        borderTop: "1px solid #1F2733"
+      }
+    }, /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 12px",
+        fontWeight: 500
+      }
+    }, c.member_name), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 12px",
+        color: "#8593A3"
+      }
+    }, c.group_name), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 12px"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        background: "#2A1A33",
+        color: "#B07FE8",
+        borderRadius: 4,
+        padding: "2px 8px",
+        fontSize: 11.5,
+        fontWeight: 600
+      }
+    }, cadKey), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: "#5B6675",
+        fontSize: 11,
+        marginLeft: 6
+      }
+    }, "every ", cad.months, " mo")), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        padding: "10px 12px",
+        color: "#3ECF9A",
+        fontWeight: 600
+      }
+    }, finFmtBDT(c.amount)), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        padding: "10px 12px",
+        color: "#E8EDF2"
+      }
+    }, total), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        padding: "10px 12px",
+        color: "#3ECF9A"
+      }
+    }, paid), /*#__PURE__*/React.createElement("td", {
+      className: "mono",
+      style: {
+        padding: "10px 12px",
+        color: "#E8A33D"
+      }
+    }, total - paid), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 12px",
+        whiteSpace: "nowrap"
+      }
+    }, canManage && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => {
+        setHonEdit(c);
+        setHonForm({
+          memberId: c.member_id,
+          memberName: c.member_name,
+          groupName: c.group_name,
+          cadence: cadKey,
+          amount: c.amount,
+          paidCount: String(paidCountOf(c)),
+          notes: ""
+        });
+        setHonErr("");
+        setHonModal(true);
+      },
+      style: {
+        background: "none",
+        border: "none",
+        color: "#8593A3",
+        padding: 4,
+        marginRight: 4,
+        fontSize: 12
+      }
+    }, "Edit"), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => setDelCfgId(c.id),
+      style: {
+        background: "none",
+        border: "none",
+        color: "#8593A3",
+        padding: 4,
+        fontSize: 12
+      }
+    }, "Delete"))));
+  }))), honConfigs.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "50px 0",
+      color: "#5B6675",
+      fontSize: 13.5
+    }
+  }, "No honorarium configs yet. Click \"+ Add Honorarium\" to set up SPM, ASPM, Members and UATFS."))), tab === "payments" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -558,7 +1103,24 @@ const FinanceView = ({
       color: "#8593A3",
       marginTop: 2
     }
-  }, "Salary, TA-DA, Committee, Deputation, Other · Aug 2025 – Aug 2028")), /*#__PURE__*/React.createElement("button", {
+  }, "Salary, TA-DA, Committee, Deputation, Other · Aug 2025 – Aug 2028")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: exportExcel,
+    style: {
+      background: "#0D2A1A",
+      border: "1px solid #3ECF9A44",
+      color: "#3ECF9A",
+      borderRadius: 6,
+      padding: "9px 14px",
+      fontSize: 12.5,
+      fontWeight: 600
+    }
+  }, "Export Excel"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setPayForm({
@@ -581,7 +1143,7 @@ const FinanceView = ({
       fontSize: 13,
       fontWeight: 600
     }
-  }, "+ Add Payment")), /*#__PURE__*/React.createElement("div", {
+  }, "+ Add Payment"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
@@ -672,8 +1234,8 @@ const FinanceView = ({
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        background: p.payment_type === "Salary" ? "#1A2233" : p.payment_type === "Procurement" ? "#2A1A33" : "#1A1500",
-        color: p.payment_type === "Salary" ? "#4F8CFF" : p.payment_type === "Procurement" ? "#B07FE8" : "#E8A33D",
+        background: p.payment_type === "Salary" ? "#1A2233" : p.payment_type === "Honorarium" ? "#2A1A33" : p.payment_type === "Procurement" ? "#1A2A2A" : "#1A1500",
+        color: p.payment_type === "Salary" ? "#4F8CFF" : p.payment_type === "Honorarium" ? "#B07FE8" : p.payment_type === "Procurement" ? "#5FD4C4" : "#E8A33D",
         borderRadius: 4,
         padding: "2px 7px",
         fontSize: 11.5,
@@ -1043,7 +1605,171 @@ const FinanceView = ({
       fontSize: 13.5,
       fontWeight: 600
     }
-  }, payBusy ? "Adding…" : "Add Payment")))), genModal && /*#__PURE__*/React.createElement("div", {
+  }, payBusy ? "Adding…" : "Add Payment")))), honModal && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,.65)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 80,
+      padding: 16
+    },
+    onClick: () => setHonModal(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: "#121821",
+      border: "1px solid #1F2733",
+      borderRadius: 10,
+      width: "100%",
+      maxWidth: 460,
+      padding: 22,
+      maxHeight: "88vh",
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "disp",
+    style: {
+      fontSize: 16,
+      fontWeight: 700
+    }
+  }, honEdit ? "Edit Honorarium" : "Add Honorarium"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setHonModal(false),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#8593A3",
+      fontSize: 16
+    }
+  }, "×")), /*#__PURE__*/React.createElement(FinField, {
+    label: "Member"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: honForm.memberId,
+    onChange: e => {
+      const m = memberOptions.find(x => x.id === Number(e.target.value));
+      let auto = "Member";
+      if (m) {
+        const r = (m.role || "").toUpperCase();
+        if (r.includes("ASPM")) auto = "ASPM";else if (r.includes("SPM")) auto = "SPM";else if (m.group === "UATFS") auto = "UATFS";
+      }
+      setHonForm(f => ({
+        ...f,
+        memberId: e.target.value,
+        memberName: m?.name || "",
+        groupName: m?.group || "",
+        cadence: auto
+      }));
+    },
+    style: finIStyle
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "— Select member —"), memberOptions.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.id
+  }, m.name, " (", m.role || m.group, ")")))), /*#__PURE__*/React.createElement(FinField, {
+    label: "Cadence"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: honForm.cadence,
+    onChange: e => setHonForm(f => ({
+      ...f,
+      cadence: e.target.value
+    })),
+    style: finIStyle
+  }, Object.keys(HONORARIUM_CADENCE).map(k => /*#__PURE__*/React.createElement("option", {
+    key: k,
+    value: k
+  }, k, " — ", HONORARIUM_CADENCE[k].label)))), /*#__PURE__*/React.createElement(FinField, {
+    label: "Amount per installment (BDT) — one month's basic salary"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: honForm.amount,
+    onChange: e => setHonForm(f => ({
+      ...f,
+      amount: e.target.value
+    })),
+    placeholder: "e.g. 45000",
+    style: finIStyle
+  })), /*#__PURE__*/React.createElement(FinField, {
+    label: "Installments already paid (before this system)"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: honForm.paidCount,
+    onChange: e => setHonForm(f => ({
+      ...f,
+      paidCount: e.target.value
+    })),
+    placeholder: "0",
+    style: finIStyle
+  })), /*#__PURE__*/React.createElement(FinField, {
+    label: "Notes (optional)"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: honForm.notes,
+    onChange: e => setHonForm(f => ({
+      ...f,
+      notes: e.target.value
+    })),
+    placeholder: "e.g. former SPM, annual report submitted",
+    style: finIStyle
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0A0E14",
+      border: "1px solid #1F2733",
+      borderRadius: 6,
+      padding: "10px 12px",
+      marginBottom: 12,
+      fontSize: 11.5,
+      color: "#5B6675",
+      lineHeight: 1.6
+    }
+  }, "Schedule runs from 27 Aug 2025 to 27 Aug 2028. Installments marked \"already paid\" will be created with Paid status when you click Generate Schedule."), honErr && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#E85D5D",
+      fontSize: 12.5,
+      marginBottom: 10
+    }
+  }, honErr), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      marginTop: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setHonModal(false),
+    style: {
+      flex: 1,
+      background: "transparent",
+      border: "1px solid #1F2733",
+      color: "#8593A3",
+      borderRadius: 6,
+      padding: "10px 0",
+      fontSize: 13.5
+    }
+  }, "Cancel"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: saveHon,
+    disabled: honBusy,
+    style: {
+      flex: 1,
+      background: "#4F8CFF",
+      border: "none",
+      color: "#08111F",
+      borderRadius: 6,
+      padding: "10px 0",
+      fontSize: 13.5,
+      fontWeight: 600
+    }
+  }, honBusy ? "Saving…" : "Save")))), genModal && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
