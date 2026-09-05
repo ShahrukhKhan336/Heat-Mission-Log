@@ -140,7 +140,18 @@ function MemberProfileModal({
       fontSize: 18,
       fontWeight: 700
     }
-  }, member.name), /*#__PURE__*/React.createElement("div", {
+  }, member.name, member.leftDate && /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 8,
+      background: "#2A1515",
+      color: "#E85D5D",
+      borderRadius: 4,
+      padding: "2px 8px",
+      fontSize: 10.5,
+      fontWeight: 600,
+      verticalAlign: "middle"
+    }
+  }, "FORMER MEMBER")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: "#8593A3",
@@ -196,7 +207,7 @@ function MemberProfileModal({
       padding: "14px 16px",
       marginBottom: 16
     }
-  }, [["Team ID", member.teamId], ["Email", member.email || "—"], ["Mobile", member.mobile || "—"], ["Date of Birth", memFmtDate(member.dob)], ["Joined", memFmtDate(member.joinedDate)]].map(([l, v]) => /*#__PURE__*/React.createElement("div", {
+  }, [["Team ID", member.teamId], ["Email", member.email || "—"], ["Mobile", member.mobile || "—"], ["Date of Birth", memFmtDate(member.dob)], ["Joined", memFmtDate(member.joinedDate)], ...(member.leftDate ? [["Left", memFmtDate(member.leftDate)]] : []), ...(member.leftReason ? [["Reason", member.leftReason]] : [])].map(([l, v]) => /*#__PURE__*/React.createElement("div", {
     key: l,
     style: {
       display: "flex",
@@ -379,7 +390,9 @@ const MembersView = ({
     role: "Member",
     group: "SPMT",
     joinedDate: "",
-    isFinanceOfficer: false
+    isFinanceOfficer: false,
+    leftDate: "",
+    leftReason: ""
   });
   const [formErr, setFormErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -397,6 +410,7 @@ const MembersView = ({
   const [histBusy, setHistBusy] = useState(false);
   const [histErr, setHistErr] = useState("");
   const [histEditId, setHistEditId] = useState(null);
+  const [showFormer, setShowFormer] = useState(false);
   function openAdd() {
     setForm({
       name: "",
@@ -406,7 +420,9 @@ const MembersView = ({
       role: "Member",
       group: "SPMT",
       joinedDate: "",
-      isFinanceOfficer: false
+      isFinanceOfficer: false,
+      leftDate: "",
+      leftReason: ""
     });
     setEditId(null);
     setFormErr("");
@@ -421,7 +437,9 @@ const MembersView = ({
       role: m.role || "Member",
       group: m.group,
       joinedDate: m.joinedDate || "",
-      isFinanceOfficer: m.isFinanceOfficer || false
+      isFinanceOfficer: m.isFinanceOfficer || false,
+      leftDate: m.leftDate || "",
+      leftReason: m.leftReason || ""
     });
     setEditId(m.id);
     setFormErr("");
@@ -443,7 +461,9 @@ const MembersView = ({
         role: (form.role || "").trim(),
         group_name: form.group,
         joined_date: form.joinedDate || null,
-        is_finance_officer: form.isFinanceOfficer || false
+        is_finance_officer: form.isFinanceOfficer || false,
+        left_date: form.leftDate || null,
+        left_reason: (form.leftReason || "").trim()
       };
       let error;
       if (editId !== null) {
@@ -560,18 +580,46 @@ const MembersView = ({
     await db.from("role_history").delete().eq("id", id);
     await loadHistory(histOpen.id);
   }
+  const activeMembers = members.filter(m => !m.leftDate);
+  const formerMembers = members.filter(m => m.leftDate);
+  const shownMembers = showFormer ? members : activeMembers;
   const count = (name, status) => status ? tasks.filter(t => t.member === name && t.status === status).length : tasks.filter(t => t.member === name && memIsOverdue(t)).length;
   return /*#__PURE__*/React.createElement(React.Fragment, null, viewMember && /*#__PURE__*/React.createElement(MemberProfileModal, {
     member: viewMember,
     tasks: tasks,
     onClose: () => setViewMember(null)
-  }), canManage && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      justifyContent: "flex-end",
-      marginBottom: 12
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+      gap: 10,
+      flexWrap: "wrap"
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12.5,
+      color: "#8593A3"
+    }
+  }, activeMembers.length, " active", formerMembers.length > 0 ? " · " + formerMembers.length + " former" : ""), formerMembers.length > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setShowFormer(p => !p),
+    style: {
+      background: showFormer ? "#1A222D" : "transparent",
+      border: "1px solid #1F2733",
+      color: showFormer ? "#E8EDF2" : "#8593A3",
+      borderRadius: 5,
+      padding: "5px 12px",
+      fontSize: 11.5
+    }
+  }, showFormer ? "Hide former members" : "Show former members")), canManage && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: openAdd,
     style: {
@@ -599,42 +647,61 @@ const MembersView = ({
       background: "#161D26",
       textAlign: "left"
     }
-  }, ["Team ID", "Name", "Group", "Email", "Phone", "Joined", "To Do", "In Progress", "Overdue", "Done", ""].map(h => /*#__PURE__*/React.createElement("th", {
+  }, ["Team ID", "Name", "Group", "Email", "Phone", "Joined", "To Do", "In Progress", "Overdue", "Done", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
     key: h,
+    className: i === 0 ? "sticky1" : i === 1 ? "sticky2" : "",
     style: {
       padding: "10px 12px",
       fontSize: 11,
       letterSpacing: .5,
       color: "#8593A3",
       fontWeight: 600,
-      whiteSpace: "nowrap"
+      whiteSpace: "nowrap",
+      ...(i === 0 ? {
+        minWidth: 132
+      } : {})
     }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, members.map(m => /*#__PURE__*/React.createElement("tr", {
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, shownMembers.map(m => /*#__PURE__*/React.createElement("tr", {
     key: m.id,
-    className: "rowhover",
+    className: "rowhover" + (m.leftDate ? " leftrow" : ""),
     onClick: () => setViewMember(m),
     style: {
       borderTop: "1px solid #1F2733",
-      cursor: "pointer"
+      cursor: "pointer",
+      opacity: m.leftDate ? 0.75 : 1,
+      background: m.leftDate ? "#1A0F0F" : "transparent"
     }
   }, /*#__PURE__*/React.createElement("td", {
-    className: "mono",
+    className: "mono sticky1",
     style: {
       padding: "10px 12px",
       color: "#8593A3",
-      whiteSpace: "nowrap"
+      whiteSpace: "nowrap",
+      minWidth: 132
     }
   }, m.teamId), /*#__PURE__*/React.createElement("td", {
+    className: "sticky2",
     style: {
       padding: "10px 12px",
       whiteSpace: "nowrap"
     }
-  }, m.name, m.role ? /*#__PURE__*/React.createElement("span", {
+  }, m.leftDate && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#E85D5D",
+      marginRight: 6,
+      fontSize: 13
+    }
+  }, "●"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: m.leftDate ? "#E85D5D" : "inherit",
+      textDecoration: m.leftDate ? "line-through" : "none"
+    }
+  }, m.name), m.role ? /*#__PURE__*/React.createElement("span", {
     style: {
       color: "#5B6675",
       fontSize: 11.5
     }
-  }, " (", m.role, ")") : null, m.isFinanceOfficer && /*#__PURE__*/React.createElement("span", {
+  }, " (", m.role, ")") : null, m.isFinanceOfficer && !m.leftDate && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 6,
       background: "#0D2A1A",
@@ -644,7 +711,17 @@ const MembersView = ({
       fontSize: 10,
       fontWeight: 600
     }
-  }, "FIN")), /*#__PURE__*/React.createElement("td", {
+  }, "FIN"), m.leftDate && /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 6,
+      background: "#2A1515",
+      color: "#E85D5D",
+      borderRadius: 3,
+      padding: "1px 6px",
+      fontSize: 10,
+      fontWeight: 600
+    }
+  }, "LEFT")), /*#__PURE__*/React.createElement("td", {
     style: {
       padding: "10px 12px",
       whiteSpace: "nowrap",
@@ -733,14 +810,14 @@ const MembersView = ({
       padding: 4,
       fontSize: 12
     }
-  }, "Delete"))))))), members.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Delete"))))))), shownMembers.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "40px 0",
       color: "#5B6675",
       fontSize: 13.5
     }
-  }, "No members yet.")), histOpen && /*#__PURE__*/React.createElement("div", {
+  }, "No members to show.")), histOpen && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       inset: 0,
@@ -1133,7 +1210,64 @@ const MembersView = ({
       fontSize: 11.5,
       color: "#5B6675"
     }
-  }, "Can access Finance, add payments and mark as paid"))), formErr && /*#__PURE__*/React.createElement("div", {
+  }, "Can access Finance, add payments and mark as paid"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1F2733",
+      marginTop: 10,
+      paddingTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11.5,
+      color: form.leftDate ? "#E85D5D" : "#5B6675",
+      marginBottom: 10,
+      fontWeight: 600,
+      letterSpacing: .5,
+      textTransform: "uppercase"
+    }
+  }, "Departure ", form.leftDate ? "— marked as left" : "(leave blank if still active)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement(MemField, {
+    label: "Left Date",
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: form.leftDate,
+    onChange: e => setForm({
+      ...form,
+      leftDate: e.target.value
+    }),
+    style: memIStyle
+  })), /*#__PURE__*/React.createElement(MemField, {
+    label: "Reason",
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: form.leftReason,
+    onChange: e => setForm({
+      ...form,
+      leftReason: e.target.value
+    }),
+    placeholder: "e.g. transferred, resigned",
+    style: memIStyle
+  }))), form.leftDate && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#2A1515",
+      border: "1px solid #E85D5D33",
+      borderRadius: 6,
+      padding: "9px 12px",
+      fontSize: 11.5,
+      color: "#E85D5D",
+      lineHeight: 1.5,
+      marginBottom: 4
+    }
+  }, "This member will be marked as former. Their tasks, payments and position history are kept.")), formErr && /*#__PURE__*/React.createElement("div", {
     style: {
       color: "#E85D5D",
       fontSize: 12.5,

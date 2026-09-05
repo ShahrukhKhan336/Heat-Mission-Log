@@ -1,13 +1,46 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #0A0E14; }
-  body { font-family: 'Inter', sans-serif; color: #E8EDF2; }
-  .mono { font-family: 'IBM Plex Mono', monospace; }
-  .disp { font-family: 'Space Grotesk', sans-serif; }
-  ::placeholder { color: #5B6675; }
-  table { border-collapse: collapse; width: 100%; }
-  .rowhover:hover { background: #161D26 !important; }
-  .btn { cursor: pointer; transition: all .12s ease; }
-  .btn:active { transform: scale(0.97); }
-  .btn:disabled { opacity: .45; cursor: not-allowed; }
-  select:focus, input:focus, textarea:focus { outline: none; border-color: #4F8CFF !important; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #0A0E14; }
+body { font-family: 'Inter', sans-serif; color: #E8EDF2; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.disp { font-family: 'Space Grotesk', sans-serif; }
+::placeholder { color: #5B6675; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.rowhover:hover { background: #161D26 !important; }
+.btn { cursor: pointer; transition: all .12s ease; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+select:focus, input:focus, textarea:focus { outline: none; border-color: #4F8CFF !important; }
+
+/* ── Frozen first two columns on wide tables ─────────────────── */
+.sticky1, .sticky2 {
+  position: sticky;
+  z-index: 2;
+  background: #121821;
+}
+.sticky1 { left: 0; }
+.sticky2 { left: 132px; }
+
+/* header cells sit above body cells */
+thead .sticky1, thead .sticky2 {
+  z-index: 3;
+  background: #161D26;
+}
+
+/* keep hover colour consistent across the frozen cells */
+.rowhover:hover .sticky1,
+.rowhover:hover .sticky2 { background: #161D26; }
+
+/* former members keep their red tint while frozen */
+.leftrow .sticky1, .leftrow .sticky2 { background: #1A0F0F; }
+.leftrow.rowhover:hover .sticky1,
+.leftrow.rowhover:hover .sticky2 { background: #221414; }
+
+/* subtle divider so the frozen edge is visible while scrolling */
+.sticky2::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 1px;
+  background: #1F2733;
+}

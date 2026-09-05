@@ -30,7 +30,9 @@ function rowToMember(r) {
     photoUrl: r.photo_url || "",
     dob: r.date_of_birth || "",
     addrPresent: r.address_present || "",
-    addrPermanent: r.address_permanent || ""
+    addrPermanent: r.address_permanent || "",
+    leftDate: r.left_date || "",
+    leftReason: r.left_reason || ""
   };
 }
 function rowToTask(r) {
@@ -1338,15 +1340,19 @@ function App() {
       background: "#161D26",
       textAlign: "left"
     }
-  }, ["ID", "Member", "Meeting", "Task", "Assigned", "Deadline", "Status", "Priority", "Remarks", ""].map(h => /*#__PURE__*/React.createElement("th", {
+  }, ["ID", "Member", "Meeting", "Task", "Assigned", "Deadline", "Status", "Priority", "Remarks", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
     key: h,
+    className: i === 0 ? "sticky1" : i === 1 ? "sticky2" : "",
     style: {
       padding: "10px 12px",
       fontSize: 11,
       letterSpacing: .5,
       color: "#8593A3",
       fontWeight: 600,
-      whiteSpace: "nowrap"
+      whiteSpace: "nowrap",
+      ...(i === 0 ? {
+        minWidth: 132
+      } : {})
     }
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(t => {
     const ov = isOverdue(t);
@@ -1358,13 +1364,15 @@ function App() {
         borderTop: "1px solid #1F2733"
       }
     }, /*#__PURE__*/React.createElement("td", {
-      className: "mono",
+      className: "mono sticky1",
       style: {
         padding: "10px 12px",
         color: "#5B6675",
-        whiteSpace: "nowrap"
+        whiteSpace: "nowrap",
+        minWidth: 132
       }
     }, t.taskCode), /*#__PURE__*/React.createElement("td", {
+      className: "sticky2",
       style: {
         padding: "10px 12px",
         whiteSpace: "nowrap"
