@@ -11,8 +11,10 @@
 </head>
 <body>
   <div id="root"></div>
-  <!-- Load order matters -->
+
+  <!-- Load order matters: modules before app.js -->
   <script src="supabase.js"></script>
+  <script src="members.js"></script>
   <script src="finance.js"></script>
   <script src="app.js"></script>
 </body>
