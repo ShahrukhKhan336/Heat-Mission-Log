@@ -689,7 +689,7 @@
   async function downloadCard(elId, filename){
     const el = $(elId);
     if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
-    const canvas = await html2canvas(el, {scale:3, backgroundColor:'#ffffff'});
+    const canvas = await html2canvas(el, {scale:3, backgroundColor:'#ffffff', useCORS:true, allowTaint:true, logging:false});
     const link = document.createElement('a');
     link.download = filename;
     link.href = canvas.toDataURL('image/png');
@@ -706,8 +706,8 @@
   });
   $('btn-pdf').addEventListener('click', async () => {
     if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
-    const frontCanvas = await html2canvas($('cardFront'), {scale:3, backgroundColor:'#ffffff'});
-    const backCanvas = await html2canvas($('cardBack'), {scale:3, backgroundColor:'#ffffff'});
+    const frontCanvas = await html2canvas($('cardFront'), {scale:3, backgroundColor:'#ffffff', useCORS:true, allowTaint:true, logging:false});
+    const backCanvas = await html2canvas($('cardBack'), {scale:3, backgroundColor:'#ffffff', useCORS:true, allowTaint:true, logging:false});
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({orientation:'landscape', unit:'in', format:[3.375,2.125]});
     pdf.addImage(frontCanvas.toDataURL('image/png'), 'PNG', 0, 0, 3.375, 2.125);
@@ -737,15 +737,37 @@
     setVal('f-address-present',  p.get('addrPresent'));
     setVal('f-address-permanent',p.get('addrPermanent'));
 
-    // Load photo from Supabase Storage URL
+    // Load photo from Supabase Storage.
+    // Fetched as a blob and converted to base64 so html2canvas can capture it
+    // — a plain cross-origin <img> src renders blank in the PNG/PDF export.
     const photoURL = p.get('photo');
     if (photoURL) {
       const img = $('photoImg'), empty = $('photoEmpty');
       if (img) {
-        img.crossOrigin = 'anonymous';
-        img.onload  = function(){ img.style.display='block'; if(empty) empty.style.display='none'; };
-        img.onerror = function(){ if(empty) empty.style.display='block'; };
-        img.src = photoURL;
+        fetch(photoURL, { mode: 'cors', cache: 'no-cache' })
+          .then(function(r){ if(!r.ok) throw new Error('fetch failed'); return r.blob(); })
+          .then(function(blob){
+            return new Promise(function(resolve, reject){
+              const fr = new FileReader();
+              fr.onload  = function(){ resolve(fr.result); };
+              fr.onerror = reject;
+              fr.readAsDataURL(blob);
+            });
+          })
+          .then(function(dataURL){
+            img.onload = function(){
+              img.style.display = 'block';
+              if (empty) empty.style.display = 'none';
+            };
+            img.src = dataURL;
+          })
+          .catch(function(err){
+            console.warn('Photo could not be loaded for export:', err);
+            if (empty) {
+              empty.style.display = 'block';
+              empty.textContent = 'Photo unavailable — click to upload';
+            }
+          });
       }
     }
 

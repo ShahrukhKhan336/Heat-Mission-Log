@@ -402,7 +402,17 @@ function ProfileModal({
       borderRadius: 10,
       width: "100%",
       maxWidth: 420,
-      padding: 22
+      maxHeight: "92vh",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 22,
+      paddingBottom: 8,
+      overflowY: "auto",
+      flex: 1
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -666,11 +676,14 @@ function ProfileModal({
       fontWeight: 600,
       marginBottom: 12
     }
-  }, "Print ID Card"), /*#__PURE__*/React.createElement("div", {
+  }, "Print ID Card")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
-      marginTop: 6
+      padding: "14px 22px",
+      borderTop: "1px solid #1F2733",
+      background: "#0F151D",
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("button", {
     className: "btn",
@@ -681,7 +694,7 @@ function ProfileModal({
       border: "1px solid #1F2733",
       color: "#8593A3",
       borderRadius: 6,
-      padding: "10px 0",
+      padding: "11px 0",
       fontSize: 13.5
     }
   }, "Cancel"), /*#__PURE__*/React.createElement("button", {
@@ -689,14 +702,14 @@ function ProfileModal({
     onClick: save,
     disabled: busy,
     style: {
-      flex: 1,
+      flex: 2,
       background: "#4F8CFF",
       border: "none",
       color: "#08111F",
       borderRadius: 6,
-      padding: "10px 0",
-      fontSize: 13.5,
-      fontWeight: 600
+      padding: "11px 0",
+      fontSize: 14,
+      fontWeight: 700
     }
   }, busy ? "Saving…" : "Save Changes"))));
 }
