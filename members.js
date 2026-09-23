@@ -7,7 +7,8 @@ const MEM_POSITIONS = ["SPM", "ASPM", "Member", "Faculty Advisor", "RA", "Head o
 const MEM_S_COLOR = {
   "To Do": "#8593A3",
   "In Progress": "#4F8CFF",
-  "Done": "#3ECF9A"
+  "Done": "#3ECF9A",
+  "Incomplete": "#E8724D"
 };
 const memIStyle = {
   width: "100%",
@@ -47,7 +48,7 @@ function memFmtDate(s) {
   });
 }
 function memIsOverdue(t) {
-  if (!t.deadline || t.status === "Done") return false;
+  if (!t.deadline || t.status === "Done" || t.status === "Incomplete") return false;
   const d = new Date(t.deadline + "T00:00:00");
   return !isNaN(d) && d < new Date();
 }
@@ -173,11 +174,11 @@ function MemberProfileModal({
   }, "×")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
+      gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))",
       gap: 8,
       marginBottom: 18
     }
-  }, [["Assigned", myTasks.length, "#E8EDF2"], ["Done", myTasks.filter(t => t.status === "Done").length, "#3ECF9A"], ["In Progress", myTasks.filter(t => t.status === "In Progress").length, "#4F8CFF"], ["Overdue", myTasks.filter(memIsOverdue).length, "#E85D5D"]].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+  }, [["Assigned", myTasks.length, "#E8EDF2"], ["Done", myTasks.filter(t => t.status === "Done").length, "#3ECF9A"], ["In Progress", myTasks.filter(t => t.status === "In Progress").length, "#4F8CFF"], ["Incomplete", myTasks.filter(t => t.status === "Incomplete").length, "#E8724D"], ["Overdue", myTasks.filter(memIsOverdue).length, "#E85D5D"]].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
     key: l,
     style: {
       background: "#0A0E14",
@@ -647,7 +648,7 @@ const MembersView = ({
       background: "#161D26",
       textAlign: "left"
     }
-  }, ["Team ID", "Name", "Group", "Email", "Phone", "Joined", "To Do", "In Progress", "Overdue", "Done", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
+  }, ["Team ID", "Name", "Group", "Email", "Phone", "Joined", "To Do", "In Progress", "Incomplete", "Overdue", "Done", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
     key: h,
     className: i === 1 ? "stickyname" : "",
     style: {
@@ -757,6 +758,12 @@ const MembersView = ({
       color: MEM_S_COLOR["In Progress"]
     }
   }, count(m.name, "In Progress")), /*#__PURE__*/React.createElement("td", {
+    className: "mono",
+    style: {
+      padding: "10px 12px",
+      color: MEM_S_COLOR["Incomplete"]
+    }
+  }, count(m.name, "Incomplete")), /*#__PURE__*/React.createElement("td", {
     className: "mono",
     style: {
       padding: "10px 12px",

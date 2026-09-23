@@ -3,13 +3,14 @@ const {
   useEffect,
   useMemo
 } = React;
-const STATUSES = ["To Do", "In Progress", "Done"];
+const STATUSES = ["To Do", "In Progress", "Done", "Incomplete"];
 const PRIORITIES = ["High", "Medium", "Low"];
 const GROUPS = ["SPMT", "Faculty Advisors", "RA", "Other Officer", "Staff", "Student", "UATFS"];
 const S_COLOR = {
   "To Do": "#8593A3",
   "In Progress": "#4F8CFF",
-  "Done": "#3ECF9A"
+  "Done": "#3ECF9A",
+  "Incomplete": "#E8724D"
 };
 const P_COLOR = {
   High: "#E8A33D",
@@ -50,7 +51,7 @@ function rowToTask(r) {
   };
 }
 function isOverdue(t) {
-  if (!t.deadline || t.status === "Done") return false;
+  if (!t.deadline || t.status === "Done" || t.status === "Incomplete") return false;
   const d = new Date(t.deadline + "T00:00:00");
   return !isNaN(d) && d < new Date();
 }
@@ -872,6 +873,7 @@ function App() {
     todo: tasks.filter(t => t.status === "To Do").length,
     ip: tasks.filter(t => t.status === "In Progress").length,
     done: tasks.filter(t => t.status === "Done").length,
+    incomplete: tasks.filter(t => t.status === "Incomplete").length,
     overdue: tasks.filter(isOverdue).length
   };
   const memberNames = [...new Set(tasks.map(t => t.member).filter(Boolean))].sort();
@@ -1228,7 +1230,7 @@ function App() {
       gap: 10,
       marginBottom: 20
     }
-  }, [["Total", stats.total, "#E8EDF2"], ["To Do", stats.todo, S_COLOR["To Do"]], ["In Progress", stats.ip, S_COLOR["In Progress"]], ["Done", stats.done, S_COLOR["Done"]], ["Overdue", stats.overdue, "#E85D5D"]].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+  }, [["Total", stats.total, "#E8EDF2"], ["To Do", stats.todo, S_COLOR["To Do"]], ["In Progress", stats.ip, S_COLOR["In Progress"]], ["Done", stats.done, S_COLOR["Done"]], ["Incomplete", stats.incomplete, S_COLOR["Incomplete"]], ["Overdue", stats.overdue, "#E85D5D"]].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
     key: l,
     style: {
       background: "#121821",
@@ -1458,8 +1460,8 @@ function App() {
       style: {
         padding: "10px 12px",
         color: "#8593A3",
-        minWidth: 220,
-        maxWidth: 360
+        minWidth: 280,
+        maxWidth: 480
       }
     }, t.remarks || "—"), /*#__PURE__*/React.createElement("td", {
       style: {
