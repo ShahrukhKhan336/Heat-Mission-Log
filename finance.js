@@ -632,8 +632,16 @@ const FinanceView = ({
   }, v)))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap",
+      marginBottom: 18
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
       gap: 0,
-      marginBottom: 18,
       background: "#121821",
       border: "1px solid #1F2733",
       borderRadius: 6,
@@ -652,7 +660,21 @@ const FinanceView = ({
       fontSize: 13,
       fontWeight: tab === t ? 600 : 400
     }
-  }, t[0].toUpperCase() + t.slice(1)))), tab === "payroll" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, t[0].toUpperCase() + t.slice(1)))), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => window.open("voucher.html", "_blank", "noopener"),
+    title: "Opens the Debit / Journal Voucher maker in a new tab",
+    style: {
+      background: "#0D2A1A",
+      border: "1px solid #3ECF9A44",
+      color: "#3ECF9A",
+      borderRadius: 6,
+      padding: "9px 16px",
+      fontSize: 13,
+      fontWeight: 600,
+      whiteSpace: "nowrap"
+    }
+  }, "Voucher Maker \u2197")), tab === "payroll" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",

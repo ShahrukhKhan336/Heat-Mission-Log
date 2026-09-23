@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HEAT Voucher Maker</title>
+<script src="assets/jszip.min.js"></script>
+<script src="assets/jv-template-data.js"></script>
+<script src="assets/voucher-template-data.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#E8EDF4;color:#1E293B;min-height:100vh}
+:root{
+  --navy:#1B3A6B;--navy-l:#2E5499;--navy-xl:#EEF4FF;
+  --surface:#FFF;--border:#CBD5E1;--bg:#E8EDF4;
+  --txt:#1E293B;--txt-m:#475569;--txt-l:#94A3B8;
+  --form-w:400px;
+  --green:#16A34A;--amber:#D97706;--red:#DC2626;
+}
+
+/* ── Shell ── */
+.app{display:flex;flex-direction:column;height:100vh}
+.app-header{
+  display:flex;align-items:center;gap:10px;padding:8px 16px;
+  background:var(--navy);color:#fff;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+}
+.app-header img{height:34px;width:34px;object-fit:contain;border-radius:3px}
+.app-header h1{font-size:1rem;font-weight:700}
+.app-header p{font-size:.7rem;opacity:.72;margin-top:1px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.hdr-btn{
+  display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:5px;
+  background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);
+  color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;
+  transition:background .15s;white-space:nowrap;
+}
+.hdr-btn:hover{background:rgba(255,255,255,.22)}
+.hdr-btn svg{width:14px;height:14px;fill:currentColor}
+.hdr-badge{
+  background:rgba(255,255,255,.12);border-radius:4px;
+  padding:3px 9px;font-size:.68rem;font-weight:700;letter-spacing:.04em;
+  border:1px solid rgba(255,255,255,.15);
+}
+
+/* ── Layout ── */
+.app-main{display:grid;grid-template-columns:var(--form-w) 1fr;flex:1;overflow:hidden}
+
+/* ── Form Panel ── */
+.form-panel{
+  display:flex;flex-direction:column;background:var(--surface);
+  border-right:1px solid var(--border);overflow-y:auto;
+}
+.form-body{flex:1;padding:13px 15px;display:flex;flex-direction:column;gap:12px}
+.sec-head{
+  font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--navy);padding-bottom:4px;border-bottom:2px solid var(--navy-xl);margin-bottom:3px;
+}
+.field-group{display:flex;flex-direction:column;gap:7px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:.7rem;font-weight:600;color:var(--txt-m)}
+.field input,.field textarea,.field select{
+  width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:5px;
+  font-size:.79rem;font-family:inherit;color:var(--txt);background:#fff;
+  transition:border-color .15s,box-shadow .15s;
+}
+.field input:focus,.field textarea:focus,.field select:focus{
+  outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(27,58,107,.1)
+}
+.field textarea{resize:vertical;min-height:46px}
+.field input[type=number]{-moz-appearance:textfield}
+.field input[type=number]::-webkit-outer-spin-button,
+.field input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+
+.pay-mode{display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.pay-mode label{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:5px 4px;font-size:.77rem;font-weight:600;cursor:pointer;color:var(--txt-m);
+  transition:background .15s;
+}
+.pay-mode input[type=radio]{display:none}
+.pay-mode label:has(input:checked){background:var(--navy-xl);color:var(--navy)}
+.pay-mode label:first-child{border-right:1px solid var(--border)}
+
+.li-row{display:grid;grid-template-columns:66px 74px 1fr 82px;gap:4px;align-items:end}
+.li-row .field label{font-size:.63rem}
+.li-row .field input{font-size:.75rem;padding:4px 6px}
+
+.calc-rates{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+.calc-rates .field label{font-size:.63rem}
+.calc-rates .field input{font-size:.74rem;padding:4px 6px}
+.calc-section{display:flex;flex-direction:column;gap:4px}
+.calc-row{
+  display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;
+  padding:3px 9px;border-radius:4px;background:#F8FAFC;border:1px solid #E2E8F0;
+}
+.calc-row .calc-lbl{font-size:.7rem;color:var(--txt-m)}
+.calc-row .calc-val{font-size:.76rem;font-weight:700;color:var(--navy);font-family:'Courier New',monospace;min-width:76px;text-align:right}
+.words-box{
+  background:var(--navy-xl);border:1px solid #BFCFE8;border-radius:5px;
+  padding:5px 9px;font-size:.73rem;color:var(--navy);font-style:italic;min-height:32px;
+}
+/* account type selector */
+.at-selector{display:flex;gap:6px;align-items:center}
+.at-selector select{flex:1}
+.at-chip{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.at-tag{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;
+  background:#DCFCE7;color:#15803D;border:1px solid #BBF7D0;
+}
+.at-tag.ret{background:#FEF9C3;color:#854D0E;border-color:#FDE68A}
+.at-addl-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+  border-radius:4px;background:#FFF7ED;border:1px solid #FED7AA;
+  font-size:.67rem;color:#C2410C;font-weight:600;margin-top:4px;
+}
+.sig-upload-btn{
+  display:flex;align-items:center;gap:5px;padding:4px 9px;
+  border:1px dashed var(--border);border-radius:5px;cursor:pointer;
+  background:#FAFAFA;font-size:.71rem;color:var(--txt-m);
+  transition:border-color .15s,background .15s;
+}
+.sig-upload-btn:hover{border-color:var(--navy);background:var(--navy-xl);color:var(--navy)}
+.sig-status{font-size:.65rem;color:var(--green);font-weight:600}
+
+/* Action bar */
+.action-bar{
+  display:flex;flex-direction:column;gap:7px;padding:11px 15px;
+  border-top:1px solid var(--border);background:#F8FAFC;
+}
+.btn{
+  width:100%;padding:8px 14px;border:none;border-radius:6px;
+  font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .15s,transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn-gen{background:var(--navy);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.btn-gen:hover{background:var(--navy-l)}
+.btn-pdf{background:#0F766E;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.btn-pdf:hover{background:#0D6560}
+.btn svg{width:15px;height:15px;fill:currentColor;flex-shrink:0}
+.addl-info{font-size:.67rem;color:var(--amber);text-align:center;font-weight:600;display:none}
+
+/* ── Preview Panel ── */
+.preview-panel{overflow:auto;display:flex;flex-direction:column;background:var(--bg);padding:14px;gap:10px}
+.preview-label{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-l);flex-shrink:0}
+.v-wrap{transform-origin:top left}
+#voucherPreview{
+  width:794px;min-height:1123px;background:#fff;
+  font-family:'Times New Roman',Times,serif;font-size:9.5pt;line-height:1.3;color:#000;
+  border:1px solid #ccc;box-shadow:0 4px 20px rgba(0,0,0,.18);
+  padding:14px 20px 20px;
+}
+
+/* Voucher internals */
+.v-hdr-tbl{width:100%;border-collapse:collapse;margin-bottom:4px}
+.v-hdr-logo,.v-hdr-seal{width:96px;vertical-align:top;padding:0}
+.v-hdr-logo img,.v-hdr-seal img{display:block;width:96px;height:128px;object-fit:contain;object-position:center}
+.v-hdr-addr{text-align:center;vertical-align:middle;padding:0 8px;font-size:10pt;line-height:1.25}
+.v-hdr-addr div{color:#111;font-size:10pt}
+.v-title{text-align:center;font-weight:700;font-size:12pt;text-decoration:underline;margin:14px 0 8px}
+.v-top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.v-cbs-tbl,.v-vd-tbl{border-collapse:collapse}
+.v-cbs-tbl{border:1px solid #000}.v-vd-tbl{border:1px solid #000}
+.v-cbs-tbl td,.v-vd-tbl td{padding:2px 9px;border:1px solid #000;font-size:9pt}
+.v-cbs-tbl td:first-child,.v-vd-tbl td:first-child{font-weight:700;background:#FAFAFA}
+.v-cbs-tbl td:last-child,.v-vd-tbl td:last-child{min-width:88px}
+.v-main-tbl{width:100%;border-collapse:collapse}
+.v-main-tbl th,.v-main-tbl td{border:1px solid #000;padding:3px 5px;font-size:9pt;vertical-align:middle}
+.v-main-tbl th{text-align:center;font-weight:700;background:#FAFAFA;font-size:8.5pt}
+.v-main-tbl .v-amt{text-align:right}
+.v-main-tbl .v-lbl{text-align:center}
+.v-data-row td{height:20px}
+.v-rcv-outer{display:flex;justify-content:flex-end;margin:5px 0 2px}
+.v-rcv-tbl{width:50%;border-collapse:collapse}
+.v-rcv-tbl td{padding:2px 8px;font-size:9pt;border:none}
+.v-rcv-head{font-weight:700;font-style:italic;text-decoration:underline}
+.v-sig-tbl{width:100%;border-collapse:collapse;margin-top:4px}
+.v-sig-tbl td{text-align:center;padding:2px 4px;font-size:9pt;width:33.33%;vertical-align:bottom}
+.v-sig-head{font-weight:700;text-decoration:underline}
+.v-sig-img-cell{height:42px;vertical-align:middle;text-align:center;padding:2px 4px}
+.v-sig-img-cell img{max-height:38px;max-width:130px;object-fit:contain}
+.v-sig-line{height:40px;border-bottom:1px solid #bbb}
+.v-rcv-sig-cell{height:32px;text-align:left;padding:0 8px 0;vertical-align:bottom}
+.v-rcv-sig-cell img{max-height:28px;max-width:100px;object-fit:contain}
+.v-rcv-sig-blank{height:28px;border-bottom:1px solid #bbb}
+.v-jv-title{text-align:center;font-weight:700;font-size:12pt;text-decoration:underline;margin:10px 0 6px}
+.v-jv-dtbl{width:100%;margin-bottom:6px}
+.v-jv-dtbl td.spacer{border:none;padding:0}
+.v-jv-dtbl td.box{border:1px solid #000;padding:3px 10px;font-size:9pt;width:240px}
+.v-jv-main{width:100%;border-collapse:collapse;margin-top:4px}
+.v-jv-main th,.v-jv-main td{border:1px solid #000;padding:3px 5px;font-size:9pt;vertical-align:middle;height:22px}
+.v-jv-main th{text-align:center;font-weight:700;background:#FAFAFA;font-size:8.5pt}
+.v-jv-main .jv-amt{text-align:right}
+.v-jv-main .jv-ctr{text-align:center}
+
+.v-page-sep{height:34px;background:var(--bg);margin:0 -20px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--txt-l);border-top:2px dashed #CBD5E1;border-bottom:2px dashed #CBD5E1;}
+.v-page-break{page-break-after:always;break-after:page;height:0;margin:0;padding:0}
+
+/* ── MODALS ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;padding:16px;
+}
+.modal-box{
+  background:#fff;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.25);
+  display:flex;flex-direction:column;max-height:90vh;width:100%;
+  animation:fadeUp .18s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.modal-sm{max-width:480px}
+.modal-lg{max-width:820px}
+.modal-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.modal-hdr h2{font-size:.95rem;font-weight:700;color:var(--navy)}
+.modal-close{
+  width:28px;height:28px;border:none;background:#F1F5F9;border-radius:6px;
+  cursor:pointer;font-size:1rem;color:var(--txt-m);display:flex;align-items:center;justify-content:center;
+}
+.modal-close:hover{background:#E2E8F0}
+.modal-body{overflow-y:auto;flex:1;padding:16px 18px}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+
+/* Account Types Modal layout */
+.at-layout{display:grid;grid-template-columns:200px 1fr;gap:0;height:480px}
+.at-list-panel{border-right:1px solid var(--border);overflow-y:auto;padding:0}
+.at-list-hdr{
+  padding:10px 12px;font-size:.66rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--txt-l);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.at-list-item{
+  padding:9px 12px;cursor:pointer;border-bottom:1px solid #F1F5F9;
+  font-size:.8rem;transition:background .12s;display:flex;align-items:center;gap:6px;
+}
+.at-list-item:hover{background:#F8FAFC}
+.at-list-item.active{background:var(--navy-xl);color:var(--navy);font-weight:600}
+.at-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0}
+.at-dot.on{background:var(--green)}
+.at-form-panel{padding:16px 18px;overflow-y:auto}
+.ded-grid{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.ded-row{
+  display:grid;grid-template-columns:22px 1fr 60px;align-items:center;gap:8px;
+  font-size:.78rem;color:var(--txt);cursor:pointer;
+}
+.ded-row input[type=checkbox]{width:14px;height:14px;accent-color:var(--navy)}
+.ded-row input[type=number]{
+  padding:3px 6px;border:1px solid var(--border);border-radius:4px;
+  font-size:.75rem;text-align:right;
+}
+.ded-row input[type=number]:disabled{background:#F8FAFC;color:var(--txt-l)}
+.addl-section{margin-top:12px;padding:10px 12px;background:#FFF7ED;border-radius:6px;border:1px solid #FED7AA}
+.addl-section label{display:flex;align-items:flex-start;gap:8px;font-size:.78rem;cursor:pointer}
+.addl-section input[type=checkbox]{width:14px;height:14px;accent-color:#C2410C;flex-shrink:0;margin-top:1px}
+
+/* Logbook */
+.lb-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.lb-table th{
+  padding:7px 10px;text-align:left;background:var(--navy);color:#fff;
+  font-size:.7rem;font-weight:600;
+}
+.lb-table td{padding:7px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.lb-table tr:hover td{background:#F8FAFC}
+.lb-amt{font-family:'Courier New',monospace;font-weight:700;color:var(--navy);text-align:right}
+.lb-type-badge{
+  display:inline-flex;align-items:center;padding:2px 7px;border-radius:10px;
+  font-size:.65rem;font-weight:600;
+}
+.lb-type-main{background:#DCFCE7;color:#15803D}
+.lb-type-addl{background:#FEF9C3;color:#854D0E}
+.lb-actions{display:flex;gap:4px}
+.lb-act-btn{
+  padding:3px 8px;border-radius:4px;border:1px solid var(--border);
+  background:#fff;font-size:.68rem;cursor:pointer;color:var(--txt-m);
+  transition:background .12s,color .12s;
+}
+.lb-act-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.lb-act-btn.del:hover{background:var(--red);border-color:var(--red)}
+.lb-empty{text-align:center;padding:40px;color:var(--txt-l);font-size:.85rem}
+
+/* ── Print ── */
+@media print{
+  .app-header,.form-panel,.preview-label,.modal-overlay{display:none!important}
+  html,body{width:100%;height:auto;background:#fff}
+  .app,.app-main{display:block;height:auto;overflow:visible}
+  .preview-panel{display:block;padding:0;background:#fff;overflow:visible;height:auto}
+  .v-wrap{transform:none!important;width:100%!important;display:block}
+  #voucherPreview{
+    width:100%!important;transform:none!important;
+    box-shadow:none!important;border:none!important;
+    padding:0!important;margin:0!important;min-height:0;font-size:9pt;
+  }
+  .v-hdr-logo img,.v-hdr-seal img{width:88px;height:116px}
+  .v-hdr-addr,.v-hdr-addr div{font-size:9.5pt}
+  .v-main-tbl th,.v-main-tbl td{font-size:8.5pt}
+  .v-sig-line{display:none!important}
+  .v-rcv-sig-blank{display:none!important}
+  .v-page-sep{display:none!important}
+  @page{size:A4 portrait;margin:8mm 10mm}
+}
+
+/* Responsive */
+@media(max-width:860px){
+  .app-main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .form-panel{max-height:55vh}
+  .app{height:auto;min-height:100vh}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── Header ── -->
+<header class="app-header">
+  <img src="assets/heat-logo.png" alt="HEAT">
+  <div>
+    <h1>HEAT Voucher Maker</h1>
+    <p>Sub-Project PIN 13860 · Aviation and Aerospace University Bangladesh</p>
+  </div>
+  <div class="hdr-right">
+    <button class="hdr-btn" onclick="openTypeModal()">
+      <svg viewBox="0 0 20 20"><path d="M10 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm.95-6.89a.75.75 0 0 0-1.9 0l-.31 1.49a5.5 5.5 0 0 0-1.23.71l-1.43-.48a.75.75 0 0 0-.9.37l-.95 1.65a.75.75 0 0 0 .17.95l1.16.93a5.49 5.49 0 0 0 0 1.42l-1.16.93a.75.75 0 0 0-.17.95l.95 1.65a.75.75 0 0 0 .9.37l1.43-.48c.38.27.79.5 1.23.71l.31 1.49a.75.75 0 0 0 1.9 0l.31-1.49a5.5 5.5 0 0 0 1.23-.71l1.43.48a.75.75 0 0 0 .9-.37l.95-1.65a.75.75 0 0 0-.17-.95l-1.16-.93c.04-.23.06-.47.06-.71s-.02-.48-.06-.71l1.16-.93a.75.75 0 0 0 .17-.95l-.95-1.65a.75.75 0 0 0-.9-.37l-1.43.48a5.5 5.5 0 0 0-1.23-.71l-.31-1.49z"/></svg>
+      Account Types
+    </button>
+    <button class="hdr-btn" onclick="openLogbookModal()">
+      <svg viewBox="0 0 20 20"><path d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H4zm1 2h10v10H5V5zm2 2v1h6V7H7zm0 3v1h6v-1H7zm0 3v1h4v-1H7z"/></svg>
+      Logbook
+    </button>
+    <div class="hdr-badge">DEBIT VOUCHER</div>
+  </div>
+</header>
+
+<main class="app-main">
+
+<!-- ── Form Panel ── -->
+<aside class="form-panel">
+<div class="form-body">
+
+  <!-- Account Type -->
+  <div>
+    <div class="sec-head">Account Type</div>
+    <div class="field-group">
+      <div class="at-selector">
+        <select id="atSelect" onchange="applyAccountType()">
+          <option value="">— Manual / No Type —</option>
+        </select>
+      </div>
+      <div id="atChips" class="at-chip"></div>
+      <div id="atAddlBadge" class="at-addl-badge" style="display:none">
+        <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm1 9.5H7v-4h2v4zm0-6H7V3h2v1.5z"/></svg>
+        Additional Govt-Deduction voucher will be generated
+      </div>
+    </div>
+  </div>
+
+  <!-- Voucher Header -->
+  <div>
+    <div class="sec-head">Voucher Header</div>
+    <div class="field-group">
+      <div class="row3">
+        <div class="field"><label>Voucher No.</label><input type="text" id="vrNo" value="01"></div>
+        <div class="field"><label>JV No.</label><input type="text" id="jvNo" value="01" placeholder="01" title="Journal Voucher number — independent counter"></div>
+        <div class="field"><label>Date</label><input type="date" id="vDate"></div>
+      </div>
+      <div class="field">
+        <label>Payment Mode</label>
+        <div class="pay-mode">
+          <label><input type="radio" name="payMode" value="Cash" id="pmCash" checked><span>Cash ☐</span></label>
+          <label><input type="radio" name="payMode" value="Bank" id="pmBank"><span>Bank ☑</span></label>
+        </div>
+      </div>
+      <div class="field"><label>Fund Source</label><input type="text" id="source" value="RPL Fund"></div>
+    </div>
+  </div>
+
+  <!-- Cash Advance Adjustment -->
+  <div>
+    <div class="sec-head">Cash Advance Adjustment <span style="font-weight:400;color:var(--txt-l)">(Optional)</span></div>
+    <div class="field-group">
+      <label style="display:flex;align-items:flex-start;gap:6px;font-size:.78rem;cursor:pointer;line-height:1.35">
+        <input type="checkbox" id="isAdvanceJv" onchange="toggleAdvanceJv()" style="margin-top:2px">
+        <span>This bill is being adjusted against a Cash Advance — generate an extra Advance Adjustment Journal Voucher</span>
+      </label>
+      <div id="advanceJvFields" style="display:none;margin-top:8px">
+        <div class="row2">
+          <div class="field"><label>Advance JV No.</label><input type="text" id="advJvNo" placeholder="auto (JV No. + 1)" title="Leave blank to auto-number as the next JV after the VAT/IT Journal Voucher number"></div>
+          <div class="field"><label>Advance A/C Code</label><input type="text" id="advCc" placeholder="e.g. 2.2 C"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line Items -->
+  <div>
+    <div class="sec-head">Line Items (Dr.)</div>
+    <div class="field-group">
+      <div style="font-size:.63rem;color:var(--txt-l)">Comp. Code · Econ. Code · Head of Account · Amount (Tk.)</div>
+      <div class="li-row">
+        <div class="field"><label>Comp.</label><input type="text" id="r1cc" placeholder="2.2 C"></div>
+        <div class="field"><label>Econ.</label><input type="text" id="r1ec" placeholder="3211125"></div>
+        <div class="field"><label>Head of Account</label><input type="text" id="r1hoa"></div>
+        <div class="field"><label>Amount (Tk.)</label><input type="number" id="r1dr" min="0" step="1" placeholder="0"></div>
+      </div>
+      <div class="li-row">
+        <div class="field"><label>Comp.</label><input type="text" id="r2cc"></div>
+        <div class="field"><label>Econ.</label><input type="text" id="r2ec"></div>
+        <div class="field"><label>Head of Account</label><input type="text" id="r2hoa"></div>
+        <div class="field"><label>Amount (Tk.)</label><input type="number" id="r2dr" min="0" step="1" placeholder="0"></div>
+      </div>
+      <div class="li-row">
+        <div class="field"><label>Comp.</label><input type="text" id="r3cc"></div>
+        <div class="field"><label>Econ.</label><input type="text" id="r3ec"></div>
+        <div class="field"><label>Head of Account</label><input type="text" id="r3hoa"></div>
+        <div class="field"><label>Amount (Tk.)</label><input type="number" id="r3dr" min="0" step="1" placeholder="0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deductions -->
+  <div>
+    <div class="sec-head">Deductions</div>
+    <div class="field-group">
+      <div class="calc-rates">
+        <div class="field"><label>VAT %</label><input type="number" id="vatPct" value="0" min="0" max="100" step="0.01"></div>
+        <div class="field"><label>IT %</label><input type="number" id="itPct" value="0" min="0" max="100" step="0.01"></div>
+        <div class="field"><label>Service %</label><input type="number" id="svcPct" value="0" min="0" max="100" step="0.01"></div>
+        <div class="field"><label>Retention %</label><input type="number" id="retPct" value="0" min="0" max="100" step="0.01"></div>
+      </div>
+      <div class="calc-section">
+        <div class="calc-row"><span class="calc-lbl">Total Gross Claim</span><span class="calc-val" id="cv-gross">—</span></div>
+        <div class="calc-row"><span class="calc-lbl">(-) VAT Deduction</span><span class="calc-val" id="cv-vat">—</span></div>
+        <div class="calc-row"><span class="calc-lbl">Including IT (after VAT)</span><span class="calc-val" id="cv-aft">—</span></div>
+        <div class="calc-row"><span class="calc-lbl">(-) IT Deduction</span><span class="calc-val" id="cv-it">—</span></div>
+        <div class="calc-row"><span class="calc-lbl">(-) Service Charge</span><span class="calc-val" id="cv-svc">—</span></div>
+        <div class="calc-row"><span class="calc-lbl">(-) Retention Money</span><span class="calc-val" id="cv-ret">—</span></div>
+        <div class="calc-row" style="background:#EEF4FF;border-color:#BFCFE8">
+          <span class="calc-lbl" style="font-weight:700">Net Payment (Debit)</span>
+          <span class="calc-val" id="cv-net" style="font-size:.83rem">—</span>
+        </div>
+      </div>
+      <div style="font-size:.66rem;color:var(--txt-l)">In Words:</div>
+      <div class="words-box" id="cv-words">—</div>
+    </div>
+  </div>
+
+  <!-- Remarks -->
+  <div>
+    <div class="sec-head">Remarks &amp; Payment</div>
+    <div class="field-group">
+      <div class="field"><label>Remarks</label><textarea id="remarks" placeholder="Being the amount paid for..."></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Cheque / Advice No.</label><input type="text" id="chequeNo"></div>
+        <div class="field"><label>Cheque Date</label><input type="date" id="chequeDate"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signatories -->
+  <div>
+    <div class="sec-head">Signatories &amp; Signatures</div>
+    <div class="field-group">
+      <div class="row3">
+        <div class="field"><label>Prepared by</label><input type="text" id="preparedBy" value="Shahrukh Khan"></div>
+        <div class="field"><label>Checked &amp; Fwd by</label><input type="text" id="checkedBy" value="Dr. Saiaf Bin Rayhan"></div>
+        <div class="field"><label>Approved by</label><input type="text" id="approvedBy" value="Dr. Saifur Rahman Bakaul"></div>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>Sig — Prepared by</label>
+          <div class="sig-upload-btn" onclick="uploadSig('prepared')">&#128247; Upload</div>
+          <span id="sig-prepared-status" class="sig-status" style="display:none">✓ Uploaded</span>
+        </div>
+        <div class="field">
+          <label>Sig — Checked by</label>
+          <div class="sig-upload-btn" onclick="uploadSig('checked')">&#128247; Upload</div>
+          <span id="sig-checked-status" class="sig-status" style="display:none">✓ Uploaded</span>
+        </div>
+        <div class="field">
+          <label>Sig — Approved by</label>
+          <div class="sig-upload-btn" onclick="uploadSig('approved')">&#128247; Upload</div>
+          <span id="sig-approved-status" class="sig-status" style="display:none">✓ Uploaded</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Sig — </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-head">Received By</div>
+    <div class="field-group">
+      <div class="row2">
+        <div class="field"><label>Name of Receiver</label><input type="text" id="rcvName" placeholder="Leave blank if not yet received"></div>
+        <div class="field"><label>Date Received</label><input type="date" id="rcvDate"></div>
+      </div>
+      <div class="field">
+        <label>Receiver's Signature (optional)</label>
+        <div class="sig-upload-btn" onclick="uploadSig('received')">&#128247; Upload Signature</div>
+        <span id="sig-received-status" class="sig-status" style="display:none">✓ Uploaded</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /form-body -->
+
+<div class="action-bar">
+  <div id="addlInfo" class="addl-info">⚡ Additional VAT/IT voucher will also be generated &amp; saved to Logbook</div>
+  <button class="btn btn-gen" onclick="generateAll()">
+    <svg viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zm-7 6v2h8v-2H6z"/></svg>
+    <span id="genBtnLabel">Generate &amp; Download DOCX</span>
+  </button>
+  <button class="btn btn-pdf" onclick="window.print()">
+    <svg viewBox="0 0 20 20"><path d="M5 4v3H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2h2a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-2V4a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1zm2 0h6v3H7V4zm-2 9v-2h10v2H5zm0 2h10v2H5v-2zm8-6a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
+    Print / Save as PDF
+  </button>
+</div>
+</aside>
+
+<!-- ── Preview Panel ── -->
+<section class="preview-panel">
+  <div class="preview-label">Live Preview — A4</div>
+  <div style="overflow:visible">
+    <div class="v-wrap" id="vWrap">
+      <div id="voucherPreview"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════════════ ACCOUNT TYPES MODAL ═══════════════ -->
+<div id="atModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeTypeModal()">
+<div class="modal-box modal-lg">
+  <div class="modal-hdr">
+    <h2>⚙ Account Types</h2>
+    <button class="modal-close" onclick="closeTypeModal()">✕</button>
+  </div>
+  <div class="at-layout">
+    <!-- Left: List -->
+    <div class="at-list-panel">
+      <div class="at-list-hdr">
+        Types
+        <button class="lb-act-btn" onclick="initNewType()" style="font-size:.65rem;padding:2px 8px">+ New</button>
+      </div>
+      <div id="atListItems"></div>
+    </div>
+    <!-- Right: Form -->
+    <div class="at-form-panel" id="atFormPanel">
+      <div style="color:var(--txt-l);font-size:.8rem;padding:30px 0;text-align:center">
+        Select a type to edit, or click + New
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="lb-act-btn del" id="atDeleteBtn" onclick="deleteType()" style="display:none;color:var(--red);border-color:#FCA5A5">Delete Type</button>
+    <button class="lb-act-btn" onclick="closeTypeModal()">Close</button>
+    <button class="btn btn-gen" style="width:auto;padding:7px 18px" id="atSaveBtn" onclick="saveType()" style="display:none">Save Type</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ LOGBOOK MODAL ═══════════════ -->
+<div id="lbModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeLogbookModal()">
+<div class="modal-box modal-lg">
+  <div class="modal-hdr">
+    <h2>📒 Voucher Logbook</h2>
+    <button class="modal-close" onclick="closeLogbookModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div id="lbContent"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="lb-act-btn" onclick="exportLogbookExcel()" style="color:var(--green);border-color:#86EFAC;font-weight:700">&#128202; Export Excel (.csv)</button>
+    <button class="lb-act-btn" onclick="exportFinanceListDocx()" style="color:var(--navy);border-color:#BFCFE8;font-weight:700">&#128196; Finance List (DOCX)</button>
+    <button class="lb-act-btn del" onclick="clearLogbook()" style="color:var(--red)">Clear All</button>
+    <button class="lb-act-btn" onclick="closeLogbookModal()">Close</button>
+  </div>
+</div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+/* ── Dependency guard ───────────────────────────────────────────
+   voucher.html needs three files alongside it in assets/.
+   If one is missing or misnamed, say so plainly instead of
+   failing later with an unreadable error. ─────────────────────── */
+(function () {
+  var missing = [];
+  if (typeof JSZip === "undefined")                  missing.push("assets/jszip.min.js");
+  if (typeof VOUCHER_TEMPLATE_BASE64 === "undefined") missing.push("assets/voucher-template-data.js");
+  if (typeof JV_TEMPLATE_BASE64 === "undefined")      missing.push("assets/jv-template-data.js");
+  if (!missing.length) return;
+  document.addEventListener("DOMContentLoaded", function () {
+    var b = document.createElement("div");
+    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#DC2626;color:#fff;"
+      + "padding:14px 18px;font:14px/1.6 system-ui,sans-serif";
+    b.innerHTML = "<strong>Setup problem &mdash; voucher files not found.</strong><br>"
+      + "These must sit in an <code>assets</code> folder next to voucher.html:<br>&nbsp;&nbsp;"
+      + missing.join("<br>&nbsp;&nbsp;")
+      + "<br><br>Check the folder is spelled <code>assets</code> and the files are inside it.";
+    document.body.appendChild(b);
+  });
+})();
+
+const LOGO_SRC = "assets/heat-logo.png";
+const SEAL_SRC = "assets/aaub-seal.png";
+
+/* ═══ UTILITIES ═══════════════════════════════════════════════ */
+function esc(s){return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escXml(s){return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+function fmtDate(iso,sep){if(!iso)return'';const p=iso.split('-');if(p.length!==3)return iso;return p[2]+sep+p[1]+sep+p[0]}
+function fmtAmt(n){if(!n||n===0)return'';return Math.round(n).toLocaleString('en-US')+'/-'}
+function fmtPct(p){if(!p||Number(p)===0)return'';return'('+p+'%)'}
+function genId(){return'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,5)}
+
+function numberToWords(n){
+  n=Math.round(n);if(!n||n===0)return'Zero';
+  const ones=['','one','two','three','four','five','six','seven','eight','nine',
+    'ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen',
+    'seventeen','eighteen','nineteen'];
+  const tens=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  function b100(x){return x<20?ones[x]:tens[Math.floor(x/10)]+(x%10?' '+ones[x%10]:'');}
+  function b1000(x){
+    if(x===0)return'';const h=Math.floor(x/100),r=x%100;
+    if(h===0)return b100(r);if(r===0)return ones[h]+' hundred';
+    return ones[h]+' hundred '+b100(r);
+  }
+  const parts=[];let m=n;
+  if(Math.floor(m/10000000)>0){parts.push(b1000(Math.floor(m/10000000))+' crore');m%=10000000;}
+  if(Math.floor(m/100000)>0){parts.push(b1000(Math.floor(m/100000))+' lakh');m%=100000;}
+  if(Math.floor(m/1000)>0){parts.push(b1000(Math.floor(m/1000))+' thousand');m%=1000;}
+  if(m>0)parts.push(b1000(m));
+  const s=parts.join(' ');return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+/* ═══ ACCOUNT TYPES ════════════════════════════════════════════ */
+const AT_KEY='heat_account_types_v2';
+const DEFAULT_TYPES=[
+  {id:'at_adv',name:'Advertisement',compCode:'2.2 C',econCode:'3211125',
+   vat:true,vatRate:15,it:true,itRate:5,svc:true,svcRate:2,ret:false,retRate:0,
+   additionalVoucher:true},
+  {id:'at_honor',name:'Honorarium',compCode:'2.2 B',econCode:'3211200',
+   vat:false,vatRate:0,it:true,itRate:10,svc:false,svcRate:0,ret:false,retRate:0,
+   additionalVoucher:false},
+  {id:'at_goods',name:'Goods Purchase',compCode:'2.2 A',econCode:'3211300',
+   vat:true,vatRate:15,it:true,itRate:5,svc:false,svcRate:0,ret:true,retRate:5,
+   additionalVoucher:true},
+  {id:'at_rfq',name:'RFQ / Procurement',compCode:'2.2 A',econCode:'3211400',
+   vat:true,vatRate:15,it:true,itRate:5,svc:false,svcRate:0,ret:false,retRate:0,
+   additionalVoucher:true},
+];
+
+function loadTypes(){
+  try{const r=localStorage.getItem(AT_KEY);if(r)return JSON.parse(r);}catch(e){}
+  const d=[...DEFAULT_TYPES];saveTypes(d);return d;
+}
+function saveTypes(arr){try{localStorage.setItem(AT_KEY,JSON.stringify(arr));}catch(e){}}
+
+let accountTypes=loadTypes();
+let currentEditId=null;
+
+function populateTypeDropdown(){
+  const sel=document.getElementById('atSelect');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— Manual / No Type —</option>';
+  accountTypes.forEach(t=>{
+    const o=document.createElement('option');
+    o.value=t.id;o.textContent=t.name;sel.appendChild(o);
+  });
+  if(prev)sel.value=prev;
+}
+
+function applyAccountType(){
+  const id=document.getElementById('atSelect').value;
+  const chips=document.getElementById('atChips');
+  const badge=document.getElementById('atAddlBadge');
+  const info=document.getElementById('addlInfo');
+  const lbl=document.getElementById('genBtnLabel');
+
+  if(!id){
+    chips.innerHTML='';badge.style.display='none';
+    info.style.display='none';lbl.textContent='Generate & Download DOCX';
+    return;
+  }
+  const t=accountTypes.find(x=>x.id===id);
+  if(!t)return;
+
+  // Auto-fill codes
+  document.getElementById('r1cc').value=t.compCode;
+  document.getElementById('r1ec').value=t.econCode;
+
+  // Auto-fill rates
+  document.getElementById('vatPct').value=t.vat?t.vatRate:0;
+  document.getElementById('itPct').value=t.it?t.itRate:0;
+  document.getElementById('svcPct').value=t.svc?t.svcRate:0;
+  document.getElementById('retPct').value=t.ret?t.retRate:0;
+
+  // Show deduction chips
+  const tags=[];
+  if(t.vat)tags.push('<span class="at-tag">VAT '+t.vatRate+'%</span>');
+  if(t.it)tags.push('<span class="at-tag">IT '+t.itRate+'%</span>');
+  if(t.svc)tags.push('<span class="at-tag">Service '+t.svcRate+'%</span>');
+  if(t.ret)tags.push('<span class="at-tag ret">Retention '+t.retRate+'%</span>');
+  chips.innerHTML=tags.join('');
+
+  // Additional voucher badge
+  if(t.additionalVoucher){
+    badge.style.display='flex';
+    info.style.display='block';
+    lbl.innerHTML='Generate &amp; Download (×3 DOCX)';
+  } else {
+    badge.style.display='none';
+    info.style.display='none';
+    lbl.textContent='Generate & Download DOCX';
+  }
+
+  update();
+}
+
+function toggleAdvanceJv(){
+  const chk=document.getElementById('isAdvanceJv').checked;
+  const box=document.getElementById('advanceJvFields');
+  box.style.display=chk?'block':'none';
+  const advCcEl=document.getElementById('advCc');
+  if(chk && !advCcEl.value.trim()){
+    advCcEl.value=document.getElementById('r1cc').value.trim();
+  }
+  const advJvNoEl=document.getElementById('advJvNo');
+  if(chk && !advJvNoEl.value.trim()){
+    const jvVal=document.getElementById('jvNo').value.trim()||'01';
+    advJvNoEl.value=nextVrNo(jvVal);
+  }
+  update();
+}
+
+/* ── Account Types Modal ── */
+function openTypeModal(){
+  populateTypeListPanel();
+  document.getElementById('atModal').style.display='flex';
+}
+function closeTypeModal(){document.getElementById('atModal').style.display='none';}
+
+function populateTypeListPanel(){
+  const el=document.getElementById('atListItems');
+  if(!accountTypes.length){el.innerHTML='<div style="padding:12px;font-size:.78rem;color:var(--txt-l)">No types yet. Click + New.</div>';return;}
+  el.innerHTML=accountTypes.map(t=>`
+    <div class="at-list-item${currentEditId===t.id?' active':''}" onclick="selectTypeEdit('${t.id}')">
+      <span class="at-dot on"></span>
+      ${esc(t.name)}
+    </div>
+  `).join('');
+}
+
+function selectTypeEdit(id){
+  currentEditId=id;
+  const t=accountTypes.find(x=>x.id===id);
+  if(!t)return;
+  populateTypeListPanel();
+  renderTypeForm(t);
+  document.getElementById('atDeleteBtn').style.display='';
+  document.getElementById('atSaveBtn').style.display='';
+}
+
+function initNewType(){
+  currentEditId='__new__';
+  populateTypeListPanel();
+  renderTypeForm({
+    id:'__new__',name:'',compCode:'',econCode:'',
+    vat:false,vatRate:15,it:false,itRate:5,svc:false,svcRate:2,ret:false,retRate:5,
+    additionalVoucher:false
+  });
+  document.getElementById('atDeleteBtn').style.display='none';
+  document.getElementById('atSaveBtn').style.display='';
+}
+
+function renderTypeForm(t){
+  const panel=document.getElementById('atFormPanel');
+  panel.innerHTML=`
+    <div class="field-group">
+      <div class="field"><label>Type Name</label><input type="text" id="atf-name" value="${esc(t.name)}" placeholder="e.g. Advertisement"></div>
+      <div class="row2">
+        <div class="field"><label>Component Code</label><input type="text" id="atf-cc" value="${esc(t.compCode)}" placeholder="2.2 C"></div>
+        <div class="field"><label>Economic Code</label><input type="text" id="atf-ec" value="${esc(t.econCode)}" placeholder="3211125"></div>
+      </div>
+      <div>
+        <div class="sec-head" style="margin-top:4px;margin-bottom:8px">Deductions</div>
+        <div class="ded-grid">
+          <label class="ded-row" onclick="toggleDedRate('vat')">
+            <input type="checkbox" id="atf-vat" ${t.vat?'checked':''}>
+            <span>VAT (inclusive in gross)</span>
+            <input type="number" id="atf-vatR" value="${t.vatRate}" min="0" max="100" step="0.01" ${t.vat?'':'disabled'} placeholder="%">
+          </label>
+          <label class="ded-row" onclick="toggleDedRate('it')">
+            <input type="checkbox" id="atf-it" ${t.it?'checked':''}>
+            <span>Income Tax (IT)</span>
+            <input type="number" id="atf-itR" value="${t.itRate}" min="0" max="100" step="0.01" ${t.it?'':'disabled'} placeholder="%">
+          </label>
+          <label class="ded-row" onclick="toggleDedRate('svc')">
+            <input type="checkbox" id="atf-svc" ${t.svc?'checked':''}>
+            <span>Service Charge</span>
+            <input type="number" id="atf-svcR" value="${t.svcRate}" min="0" max="100" step="0.01" ${t.svc?'':'disabled'} placeholder="%">
+          </label>
+          <label class="ded-row" onclick="toggleDedRate('ret')">
+            <input type="checkbox" id="atf-ret" ${t.ret?'checked':''}>
+            <span>Retention Money</span>
+            <input type="number" id="atf-retR" value="${t.retRate}" min="0" max="100" step="0.01" ${t.ret?'':'disabled'} placeholder="%">
+          </label>
+        </div>
+      </div>
+      <div class="addl-section">
+        <label>
+          <input type="checkbox" id="atf-addl" ${t.additionalVoucher?'checked':''}>
+          <span><strong>Generate additional Govt-Deduction voucher</strong><br>
+          <span style="font-size:.72rem;color:var(--txt-m)">A separate DOCX will be auto-generated for VAT + IT amounts (payable to govt). Use for Advertisement, Procurement, Goods Purchase etc.</span></span>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function toggleDedRate(key){
+  setTimeout(()=>{
+    const cb=document.getElementById('atf-'+key);
+    const rate=document.getElementById('atf-'+key+'R');
+    if(cb&&rate) rate.disabled=!cb.checked;
+  },0);
+}
+
+function saveType(){
+  const name=document.getElementById('atf-name')?.value.trim();
+  if(!name){alert('Please enter a type name.');return;}
+  const t={
+    id:currentEditId==='__new__'?genId():currentEditId,
+    name,
+    compCode:document.getElementById('atf-cc').value.trim(),
+    econCode:document.getElementById('atf-ec').value.trim(),
+    vat:document.getElementById('atf-vat').checked,
+    vatRate:parseFloat(document.getElementById('atf-vatR').value)||0,
+    it:document.getElementById('atf-it').checked,
+    itRate:parseFloat(document.getElementById('atf-itR').value)||0,
+    svc:document.getElementById('atf-svc').checked,
+    svcRate:parseFloat(document.getElementById('atf-svcR').value)||0,
+    ret:document.getElementById('atf-ret').checked,
+    retRate:parseFloat(document.getElementById('atf-retR').value)||0,
+    additionalVoucher:document.getElementById('atf-addl').checked,
+  };
+  if(currentEditId==='__new__'){
+    accountTypes.push(t);
+  } else {
+    const idx=accountTypes.findIndex(x=>x.id===currentEditId);
+    if(idx>=0)accountTypes[idx]=t;
+  }
+  saveTypes(accountTypes);
+  currentEditId=t.id;
+  populateTypeListPanel();
+  populateTypeDropdown();
+  // Flash saved
+  const btn=document.getElementById('atSaveBtn');
+  const orig=btn.textContent;btn.textContent='✓ Saved!';
+  setTimeout(()=>btn.textContent=orig,1500);
+}
+
+function deleteType(){
+  if(!currentEditId||currentEditId==='__new__')return;
+  if(!confirm('Delete this account type?'))return;
+  accountTypes=accountTypes.filter(x=>x.id!==currentEditId);
+  saveTypes(accountTypes);
+  currentEditId=null;
+  populateTypeListPanel();
+  populateTypeDropdown();
+  document.getElementById('atFormPanel').innerHTML='<div style="color:var(--txt-l);font-size:.8rem;padding:30px 0;text-align:center">Type deleted. Select another or click + New.</div>';
+  document.getElementById('atDeleteBtn').style.display='none';
+  document.getElementById('atSaveBtn').style.display='none';
+}
+
+/* ═══ LOGBOOK ══════════════════════════════════════════════════ */
+const LB_KEY='heat_logbook_v2';
+let logbook=loadLogbook();
+
+function loadLogbook(){try{const r=localStorage.getItem(LB_KEY);if(r)return JSON.parse(r);}catch(e){}return[];}
+function saveLogbook(){try{localStorage.setItem(LB_KEY,JSON.stringify(logbook));}catch(e){}}
+
+function addLogEntry(entry){logbook.unshift(entry);saveLogbook();}
+
+function openLogbookModal(){
+  renderLogbookTable();
+  document.getElementById('lbModal').style.display='flex';
+}
+function closeLogbookModal(){document.getElementById('lbModal').style.display='none';}
+
+/* ── Finance List helpers ── */
+function getMonthLabel(d){
+  if(!d)return'';const[y,m]=d.split('-');
+  const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return mn[parseInt(m,10)-1]+', '+y;
+}
+function groupByMonth(entries){
+  const g=[];let cur=null;
+  const s=[...entries].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  for(const e of s){const lbl=getMonthLabel(e.date);if(lbl!==cur){cur=lbl;g.push({month:lbl,entries:[]});}g[g.length-1].entries.push(e);}
+  return g;
+}
+function getVoucherSummary(e){
+  const vr=e.vrNo||'';const hasAddl=e.additionalIds&&e.additionalIds.length>0;
+  if(e.isAdditional)return'Govt Deduction DV (Vr. '+vr+')';
+  if(hasAddl){
+    const jvStr=e.jvNo?' / Journal (JV. '+e.jvNo+')':'';
+    return'Debit Voucher-2pc (Vr. '+vr+')'+jvStr;
+  }
+  return'Debit Voucher-1pc (Vr. '+vr+')';
+}
+function getPeriodStr(entries){
+  const ms=[...new Set(entries.map(e=>getMonthLabel(e.date)).filter(Boolean))];
+  if(!ms.length)return'';
+  if(ms.length===1)return'Month of '+ms[0];
+  return'Month of '+ms[0]+' and '+ms[ms.length-1];
+}
+
+function renderLogbookTable(){
+  const el=document.getElementById('lbContent');
+  if(!logbook.length){
+    el.innerHTML='<div class="lb-empty">No vouchers recorded yet.<br>Generate a voucher to start the logbook.</div>';
+    return;
+  }
+  const sorted=[...logbook].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const groups=groupByMonth(sorted);
+  let h=`<table class="lb-table">
+  <thead><tr>
+    <th>S.N.</th><th>Date</th><th>Vr. No</th><th>Description</th>
+    <th style="text-align:right">Amount (Tk.)</th><th>Type</th><th>Actions</th>
+  </tr></thead><tbody>`;
+  let sn=1;
+  for(const{month,entries}of groups){
+    h+=`<tr><td colspan="7" style="text-align:center;font-weight:700;background:#EEF4FF;padding:5px 10px;font-size:.77rem;color:var(--navy);letter-spacing:.02em">${esc(month)}</td></tr>`;
+    for(const e of entries){
+      const desc=e.description||e.r1hoa||e.accountTypeName||'—';
+      const type=e.voucherType||(e.isAdditional?'Govt Deduction DV':'Debit Voucher');
+      const badge=e.isAdditional?'lb-type-addl':'lb-type-main';
+      h+=`<tr>
+        <td style="color:var(--txt-l);font-size:.7rem">${sn++}</td>
+        <td>${esc(fmtDate(e.date,'.'))}</td>
+        <td style="font-weight:700">${esc(e.vrNo||'')}</td>
+        <td>${esc(desc)}</td>
+        <td class="lb-amt">${fmtAmt(e.gross)||'—'}</td>
+        <td><span class="lb-type-badge ${badge}">${esc(type)}</span></td>
+        <td class="lb-actions">
+          <button class="lb-act-btn" onclick="redownloadEntry('${e.id}')">&#8595; DOCX</button>
+          <button class="lb-act-btn del" onclick="deleteEntry('${e.id}')">&#10005;</button>
+        </td>
+      </tr>`;
+    }
+  }
+  h+='</tbody></table>';
+  el.innerHTML=h;
+}
+
+/* ── Excel export (CSV) ── */
+function exportLogbookExcel(){
+  if(!logbook.length){alert('Logbook is empty.');return;}
+  const sorted=[...logbook].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const hdr=['S.N.','Date','Vr. No','Description','Amount (Tk.)','Type','Remarks'];
+  let sn=1;
+  const rows=[hdr,...sorted.map(e=>{
+    const desc=e.description||e.r1hoa||e.accountTypeName||'';
+    const amt=e.gross?Math.round(e.gross).toLocaleString('en-US'):'';
+    const type=e.voucherType||(e.isAdditional?'Govt Deduction Voucher':'Debit Voucher');
+    return[sn++,fmtDate(e.date,'.'),e.vrNo||'',desc,amt,type,getVoucherSummary(e)];
+  })];
+  const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Finance_List.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+/* ── Finance List DOCX ── */
+function xEsc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function flCell(text,colW,align,bold,span,sz){
+  align=align||'left';bold=bold||false;sz=sz||20;
+  const bT=bold?'<w:b/><w:bCs/>':'';
+  const jcT=align!=='left'?'<w:jc w:val="'+align+'"/>':'';
+  const tcW=span?'<w:gridSpan w:val="'+span+'"/><w:tcW w:w="'+(colW*span)+'" w:type="dxa"/>'
+                :'<w:tcW w:w="'+colW+'" w:type="dxa"/>';
+  const rFonts='<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>';
+  const rSz='<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/>';
+  const rPr='<w:rPr>'+bT+rFonts+rSz+'</w:rPr>';
+  return '<w:tc><w:tcPr>'+tcW+'<w:vAlign w:val="center"/></w:tcPr>'+
+    '<w:p><w:pPr>'+jcT+'<w:spacing w:before="40" w:after="40"/>'+rPr+'</w:pPr>'+
+    '<w:r>'+rPr+'<w:t xml:space="preserve">'+xEsc(text)+'</w:t></w:r></w:p></w:tc>';
+}
+function flRow(h){
+  const cells=Array.prototype.slice.call(arguments,1);
+  return '<w:tr><w:trPr><w:trHeight w:val="'+h+'" w:hRule="atLeast"/></w:trPr>'+cells.join('')+'</w:tr>';
+}
+
+async function exportFinanceListDocx(){
+  if(!logbook.length){alert('Logbook is empty.');return;}
+  try{
+    const binary=atob(JV_TEMPLATE_BASE64);
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    const zip=await JSZip.loadAsync(bytes);
+    const exXml=await zip.file('word/document.xml').async('string');
+    const bodyIdx=exXml.indexOf('<w:body>');
+    const preamble=exXml.substring(0,bodyIdx+8);
+    const tblStart=exXml.indexOf('<w:tbl>',bodyIdx);
+    let depth=1,pos=tblStart+7;
+    while(depth>0&&pos<exXml.length){
+      const nO=exXml.indexOf('<w:tbl>',pos),nC=exXml.indexOf('</w:tbl>',pos);
+      if(nC===-1)break;
+      if(nO!==-1&&nO<nC){depth++;pos=nO+7;}else{depth--;pos=nC+8;}
+    }
+    const letterheadTbl=exXml.substring(tblStart,pos);
+    const sepStart=exXml.indexOf('<w:p',pos);
+    const sepEnd=exXml.indexOf('</w:p>',sepStart)+6;
+    const separatorP=exXml.substring(sepStart,sepEnd);
+    const sectStart=exXml.lastIndexOf('<w:sectPr');
+    const sectEnd=exXml.indexOf('</w:sectPr>')+11;
+    const sectPr=exXml.substring(sectStart,sectEnd);
+    const CW=[600,1400,3800,1900,2100];
+    const sorted=[...logbook].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    const groups=groupByMonth(sorted);
+    const period=getPeriodStr(sorted);
+    const hdrRow=flRow(480,flCell('S.N.',CW[0],'center',true),flCell('Date',CW[1],'center',true),
+      flCell('Description',CW[2],'center',true),flCell('Amount',CW[3],'center',true),flCell('Remarks',CW[4],'center',true));
+    let sn=1;const dataRows=[hdrRow];
+    for(const g of groups){
+      dataRows.push(flRow(380,flCell(g.month,CW[0],'center',false,5)));
+      for(const e of g.entries){
+        const desc=e.description||e.r1hoa||e.accountTypeName||'';
+        const amt=e.gross?Math.round(e.gross).toLocaleString('en-US')+'/-':'';
+        dataRows.push(flRow(380,flCell(String(sn++),CW[0],'center'),flCell(fmtDate(e.date,'.'),CW[1],'center'),
+          flCell(desc,CW[2]),flCell(amt,CW[3],'right'),flCell(getVoucherSummary(e),CW[4])));
+      }
+    }
+    const total=CW.reduce((a,b)=>a+b,0);
+    const borders=['top','left','bottom','right','insideH','insideV'].map(s=>'<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="000000"/>').join('');
+    const tblXml='<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="'+total+'" w:type="dxa"/><w:tblBorders>'+borders+'</w:tblBorders></w:tblPr>'+
+      '<w:tblGrid>'+CW.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>'+dataRows.join('')+'</w:tbl>';
+    const rFt='<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>';
+    const rPrT='<w:rPr><w:b/><w:bCs/><w:u w:val="single"/>'+rFt+'<w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>';
+    const titleP='<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="80" w:after="60"/>'+rPrT+'</w:pPr><w:r>'+rPrT+'<w:t>Finance List</w:t></w:r></w:p>';
+    const rPrPer='<w:rPr><w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+    const periodP=period?'<w:p><w:pPr><w:spacing w:before="40" w:after="120"/>'+rPrPer+'</w:pPr><w:r>'+rPrPer+'<w:t>Issues: '+xEsc(period)+'</w:t></w:r></w:p>':'';
+    const newXml=preamble+'\n'+letterheadTbl+'\n'+separatorP+'\n'+titleP+'\n'+periodP+'\n'+tblXml+'\n'+sectPr+'\n</w:body></w:document>';
+    zip.file('word/document.xml',newXml);
+    const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='Finance_List.docx';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+  }catch(err){alert('Finance List DOCX error: '+err.message);console.error(err);}
+}
+
+
+function deleteEntry(id){
+  logbook=logbook.filter(e=>e.id!==id);
+  saveLogbook();renderLogbookTable();
+}
+
+function clearLogbook(){
+  if(!confirm('Clear all logbook entries?'))return;
+  logbook=[];saveLogbook();renderLogbookTable();
+}
+
+async function redownloadEntry(id){
+  const e=logbook.find(x=>x.id===id);
+  if(!e){alert('Entry not found.');return;}
+  await buildDocx(e, e.vrNo+'.docx');
+}
+
+/* ═══ FORM DATA & CALC ═════════════════════════════════════════ */
+const sigData={};
+
+function uploadSig(key){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=ev=>{
+    const file=ev.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=e2=>{
+      sigData[key]=e2.target.result;
+      const s=document.getElementById('sig-'+key+'-status');
+      if(s)s.style.display='inline';
+      update();
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+
+function collectForm(){
+  const g=id=>document.getElementById(id);
+  const atId=g('atSelect').value;
+  const atType=accountTypes.find(x=>x.id===atId)||null;
+  return {
+    accountTypeId:atId, accountTypeName:atType?atType.name:'Manual',
+    additionalVoucher:atType?atType.additionalVoucher:false,
+    vrNo:g('vrNo').value.trim()||'01', jvNo:g('jvNo').value.trim()||'01', date:g('vDate').value||'',
+    payMode:document.querySelector('input[name="payMode"]:checked')?.value||'Cash',
+    source:g('source').value.trim()||'',
+    r1cc:g('r1cc').value.trim(),r1ec:g('r1ec').value.trim(),r1hoa:g('r1hoa').value.trim(),r1dr:parseFloat(g('r1dr').value)||0,
+    r2cc:g('r2cc').value.trim(),r2ec:g('r2ec').value.trim(),r2hoa:g('r2hoa').value.trim(),r2dr:parseFloat(g('r2dr').value)||0,
+    r3cc:g('r3cc').value.trim(),r3ec:g('r3ec').value.trim(),r3hoa:g('r3hoa').value.trim(),r3dr:parseFloat(g('r3dr').value)||0,
+    vatPct:parseFloat(g('vatPct').value)||0,
+    itPct:parseFloat(g('itPct').value)||0,
+    svcPct:parseFloat(g('svcPct').value)||0,
+    retPct:parseFloat(g('retPct').value)||0,
+    remarks:g('remarks').value.trim()||'',
+    chequeNo:g('chequeNo').value.trim()||'',
+    chequeDate:g('chequeDate').value||'',
+    preparedBy:g('preparedBy').value.trim()||'',
+    checkedBy:g('checkedBy').value.trim()||'',
+    approvedBy:g('approvedBy').value.trim()||'',
+    rcvName:g('rcvName').value.trim()||'',
+    rcvDate:g('rcvDate').value||'',
+    isAdvanceJv:document.getElementById('isAdvanceJv')?document.getElementById('isAdvanceJv').checked:false,
+    advJvNo:g('advJvNo')&&g('advJvNo').value.trim()?g('advJvNo').value.trim():nextVrNo(g('jvNo').value.trim()||'01'),
+    advCc:g('advCc')?g('advCc').value.trim():'',
+  };
+}
+
+function calcTotals(d){
+  const gross=d.r1dr+d.r2dr+d.r3dr;
+  const vatAmt=d.vatPct>0?Math.round(gross*d.vatPct/(100+d.vatPct)):0;
+  const afterVat=gross-vatAmt;
+  const itAmt=Math.round(afterVat*d.itPct/100);
+  const svcAmt=Math.round(afterVat*d.svcPct/100);
+  const retAmt=Math.round(gross*d.retPct/100);
+  const netPaymt=gross-vatAmt-itAmt-svcAmt-retAmt;
+  return{gross,vatAmt,afterVat,itAmt,svcAmt,retAmt,netPaymt};
+}
+
+function updateSummary(d,c){
+  const F=(id,v)=>document.getElementById(id).textContent=v||'—';
+  F('cv-gross',fmtAmt(c.gross));F('cv-vat',fmtAmt(c.vatAmt));
+  F('cv-aft',fmtAmt(c.afterVat));F('cv-it',fmtAmt(c.itAmt));
+  F('cv-svc',fmtAmt(c.svcAmt));F('cv-ret',fmtAmt(c.retAmt));
+  F('cv-net',fmtAmt(c.netPaymt));
+  document.getElementById('cv-words').textContent=c.netPaymt>0?numberToWords(c.netPaymt)+' taka only':'—';
+}
+
+/* ═══ PREVIEW RENDERER ═════════════════════════════════════════ */
+function sigImgHtml(key){
+  if(sigData[key])return`<img src="${sigData[key]}" style="max-height:38px;max-width:130px;object-fit:contain;display:block;margin:0 auto">`;
+  return`<div class="v-sig-line"></div>`;
+}
+function rcvSigHtml(){
+  if(sigData['received'])return`<img src="${sigData['received']}" style="max-height:28px;max-width:100px;object-fit:contain">`;
+  return`<div class="v-rcv-sig-blank"></div>`;
+}
+
+/* ── Shared letterhead ─────────────────────────────────────────────── */
+function buildVoucherHeader(){
+  return`
+<table class="v-hdr-tbl">
+<tr>
+  <td class="v-hdr-logo"><img src="${SEAL_SRC}" alt="AAUB Logo"></td>
+  <td class="v-hdr-addr">
+    <div>Office of HEAT Project</div>
+    <div>Department of Aerospace Engineering</div>
+    <div>Aviation and Aerospace University Bangladesh</div>
+    <div>Mahendranagar, Lalmonirhat-5500</div>
+    <div>Subproject Pin- 13860; mobile: 01755-349337</div>
+    <div>www.aaub.edu.bd; email: spm.pin13860@aaub.edu.bd</div>
+  </td>
+  <td class="v-hdr-seal"><img src="${LOGO_SRC}" alt="HEAT Logo"></td>
+</tr>
+</table>`;}
+
+function buildPreview(d,c){
+  const inWords=c.netPaymt>0?numberToWords(c.netPaymt)+' taka only':'';
+  function dataRow(cc,ec,hoa,dr){
+    return`<tr class="v-data-row">
+      <td>${esc(cc)}</td><td>${esc(ec)}</td>
+      <td colspan="2" style="text-align:center">${esc(hoa)}</td>
+      <td class="v-amt">${esc(fmtAmt(dr))}</td><td></td>
+    </tr>`;
+  }
+  const retRow=d.retPct>0?`<tr><td colspan="4" class="v-lbl">(-) Retention Money ${esc(fmtPct(d.retPct))}</td><td class="v-amt">${esc(fmtAmt(c.retAmt))}</td><td></td></tr>`:'';
+  return`
+${buildVoucherHeader()}
+<p class="v-title">Debit Voucher</p>
+<div class="v-top-row">
+  <table class="v-cbs-tbl">
+    <tr><td>Cash</td><td>${d.payMode==='Cash'?'&#x221A;':'X'}</td></tr>
+    <tr><td>Bank</td><td>${d.payMode==='Bank'?'&#x221A;':'X'}</td></tr>
+    <tr><td>Source</td><td>${esc(d.source)}</td></tr>
+  </table>
+  <table class="v-vd-tbl">
+    <tr><td>Vr. No</td><td>${esc(d.vrNo)}</td></tr>
+    <tr><td>Date</td><td>${esc(fmtDate(d.date,'-'))}</td></tr>
+  </table>
+</div>
+<table class="v-main-tbl">
+<colgroup>
+  <col style="width:13.6%"><col style="width:14.4%">
+  <col style="width:16.5%"><col style="width:14.1%">
+  <col style="width:21.7%"><col style="width:19.7%">
+</colgroup>
+<thead><tr>
+  <th>Component<br>Code</th><th>Economic<br>Code</th>
+  <th colspan="2">Head of Account</th>
+  <th>Amount (Tk.)<br>Dr.(+)</th><th>Amount (Tk.)<br>Cr (-)</th>
+</tr></thead>
+<tbody>
+  ${dataRow(d.r1cc,d.r1ec,d.r1hoa,d.r1dr)}
+  ${dataRow(d.r2cc,d.r2ec,d.r2hoa,d.r2dr)}
+  ${dataRow(d.r3cc,d.r3ec,d.r3hoa,d.r3dr)}
+  <tr><td colspan="4" class="v-lbl">Total Gross Claim</td><td class="v-amt">${esc(fmtAmt(c.gross))}</td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">(-) VAT deduction ${esc(fmtPct(d.vatPct))}</td><td class="v-amt">${esc(fmtAmt(c.vatAmt))}</td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">Including IT</td><td class="v-amt">${esc(fmtAmt(c.afterVat))}</td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">(-) IT Deduction ${esc(fmtPct(d.itPct))}</td><td class="v-amt">${esc(fmtAmt(c.itAmt))}</td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">(-) Service Charge ${esc(fmtPct(d.svcPct))}</td><td class="v-amt">${esc(fmtAmt(c.svcAmt))}</td><td></td></tr>
+  ${retRow}
+  <tr>
+    <td colspan="3" style="font-size:9pt;padding:3px 5px">In Words: ${esc(inWords)}</td>
+    <td class="v-lbl">Net Payment Tk.</td>
+    <td class="v-amt">${esc(fmtAmt(c.netPaymt))}</td><td></td>
+  </tr>
+  <tr>
+    <td colspan="4" style="font-size:9pt;padding:3px 5px">Remarks: ${esc(d.remarks)}</td>
+    <td style="font-size:9pt;padding:3px 4px;vertical-align:top">${d.payMode==='Cash'?'<strong>CASH</strong>':'Cheque/Advice No: '+esc(d.chequeNo)}</td>
+    <td style="font-size:9pt;padding:3px 4px;vertical-align:top">Date: ${esc(fmtDate(d.chequeDate,'.'))}</td>
+  </tr>
+</tbody>
+</table>
+<div class="v-rcv-outer">
+  <table class="v-rcv-tbl">
+    <tr><td colspan="2" class="v-rcv-head"><em>Received by</em></td></tr>
+    <tr><td class="v-rcv-sig-cell" colspan="2">${rcvSigHtml()}</td></tr>
+    <tr><td>Signature</td><td></td></tr>
+    <tr><td>Name in Full</td><td>${esc(d.rcvName||'')}</td></tr>
+    <tr><td>Date</td><td>${d.rcvDate?esc(fmtDate(d.rcvDate,'-')):''}</td></tr>
+  </table>
+</div>
+<table class="v-sig-tbl">
+  <tr>
+    <td class="v-sig-img-cell">${sigImgHtml('prepared')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('checked')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('approved')}</td>
+  </tr>
+  <tr>
+    <td class="v-sig-head">Prepared by</td>
+    <td class="v-sig-head">Checked and Forwarded by</td>
+    <td class="v-sig-head">Approved by</td>
+  </tr>
+  <tr>
+    <td>${esc(d.preparedBy)}</td>
+    <td>${esc(d.checkedBy)}</td>
+    <td>${esc(d.approvedBy)}</td>
+  </tr>
+</table>`;
+}
+
+function buildAdditionalPreview(d,c){
+  const addlVrNo=nextVrNo(d.vrNo);
+  const addlGross=c.vatAmt+c.itAmt;
+  const inWords=addlGross>0?numberToWords(addlGross)+' taka only':'';
+  const srcHoa=d.r1hoa||d.accountTypeName||'';
+  const addlRows=[];
+  if(c.vatAmt>0) addlRows.push({label:'VAT',amt:c.vatAmt});
+  if(c.itAmt>0)  addlRows.push({label:'IT', amt:c.itAmt});
+  while(addlRows.length<3) addlRows.push({label:'',amt:null});
+  const dedPhrases=[];
+  if(c.vatAmt>0) dedPhrases.push('VAT');
+  if(c.itAmt>0) dedPhrases.push('IT');
+  const addlRemarksTxt=dedPhrases.join(' &amp; ')+' deducted from '+esc(srcHoa);
+  return`
+${buildVoucherHeader()}
+<p class="v-title">Debit Voucher</p>
+<div class="v-top-row">
+  <table class="v-cbs-tbl">
+    <tr><td>Cash</td><td>${d.payMode==='Cash'?'&#x221A;':'X'}</td></tr>
+    <tr><td>Bank</td><td>${d.payMode==='Bank'?'&#x221A;':'X'}</td></tr>
+    <tr><td>Source</td><td>${esc(d.source)}</td></tr>
+  </table>
+  <table class="v-vd-tbl">
+    <tr><td>Vr. No</td><td>${esc(addlVrNo)}</td></tr>
+    <tr><td>Date</td><td>${esc(fmtDate(d.date,'-'))}</td></tr>
+  </table>
+</div>
+<table class="v-main-tbl">
+<colgroup>
+  <col style="width:13.6%"><col style="width:14.4%">
+  <col style="width:16.5%"><col style="width:14.1%">
+  <col style="width:21.7%"><col style="width:19.7%">
+</colgroup>
+<thead><tr>
+  <th>Component<br>Code</th><th>Economic<br>Code</th>
+  <th colspan="2">Head of Account</th>
+  <th>Amount (Tk.)<br>Dr.(+)</th><th>Amount (Tk.)<br>Cr (-)</th>
+</tr></thead>
+<tbody>
+  ${addlRows.map(r=>`<tr class="v-data-row">
+    <td>${r.label?esc(d.r1cc):''}</td><td></td>
+    <td colspan="2" style="text-align:center">${esc(r.label)}</td>
+    <td class="v-amt">${r.amt!=null?esc(fmtAmt(r.amt)):''}</td><td></td>
+  </tr>`).join('')}
+  <tr><td colspan="4" class="v-lbl">Total Gross Claim</td><td class="v-amt">${esc(fmtAmt(addlGross))}</td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">(-) VAT deduction</td><td class="v-amt"></td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">Including IT</td><td class="v-amt"></td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">(-) IT Deduction</td><td class="v-amt"></td><td></td></tr>
+  <tr><td colspan="4" class="v-lbl">(-) Service Charge</td><td class="v-amt"></td><td></td></tr>
+  <tr>
+    <td colspan="3" style="font-size:9pt;padding:3px 5px">In Words: ${esc(inWords)}</td>
+    <td class="v-lbl">Net Payment Tk.</td>
+    <td class="v-amt">${esc(fmtAmt(addlGross))}</td><td></td>
+  </tr>
+  <tr>
+    <td colspan="4" style="font-size:9pt;padding:3px 5px">Remarks: ${addlRemarksTxt}</td>
+    <td style="font-size:9pt;padding:3px 4px;vertical-align:top">${d.payMode==='Cash'?'<strong>CASH</strong>':'Cheque/Advice No: '+esc(d.chequeNo)}</td>
+    <td style="font-size:9pt;padding:3px 4px;vertical-align:top">Date: ${esc(fmtDate(d.chequeDate,'.'))}</td>
+  </tr>
+</tbody>
+</table>
+<div class="v-rcv-outer">
+  <table class="v-rcv-tbl">
+    <tr><td colspan="2" class="v-rcv-head"><em>Received by</em></td></tr>
+    <tr><td class="v-rcv-sig-cell" colspan="2">${rcvSigHtml()}</td></tr>
+    <tr><td>Signature</td><td></td></tr>
+    <tr><td>Name in Full</td><td>${esc(d.rcvName||'')}</td></tr>
+    <tr><td>Date</td><td>${d.rcvDate?esc(fmtDate(d.rcvDate,'-')):''}</td></tr>
+  </table>
+</div>
+<table class="v-sig-tbl">
+  <tr>
+    <td class="v-sig-img-cell">${sigImgHtml('prepared')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('checked')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('approved')}</td>
+  </tr>
+  <tr>
+    <td class="v-sig-head">Prepared by</td>
+    <td class="v-sig-head">Checked and Forwarded by</td>
+    <td class="v-sig-head">Approved by</td>
+  </tr>
+  <tr>
+    <td>${esc(d.preparedBy)}</td>
+    <td>${esc(d.checkedBy)}</td>
+    <td>${esc(d.approvedBy)}</td>
+  </tr>
+</table>`;
+}
+
+function buildJVPreview(d,c){
+  const jvCrs=[];
+  if(c.vatAmt>0) jvCrs.push({cc:d.r1cc,hoa:'VAT',amt:fmtAmt(c.vatAmt)});
+  if(c.itAmt>0)  jvCrs.push({cc:d.r1cc,hoa:'IT',amt:fmtAmt(c.itAmt)});
+  if(c.svcAmt>0) jvCrs.push({cc:d.r1cc,hoa:'Service Charge',amt:fmtAmt(c.svcAmt)});
+  const totalDed=c.vatAmt+c.itAmt+c.svcAmt;
+  const inWords=totalDed>0?numberToWords(totalDed)+' taka only':'';
+  const cashCheque=d.payMode==='Cash'?'<strong>CASH</strong>':esc(d.chequeNo);
+  while(jvCrs.length<4) jvCrs.push({cc:'',hoa:'',amt:''});
+  return`
+${buildVoucherHeader()}
+<p class="v-jv-title">Journal Voucher- RPL</p>
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+  <table class="v-vd-tbl">
+    <tr><td>JV. No.</td><td>${esc(d.jvNo)}</td></tr>
+    <tr><td>Date</td><td>${esc(fmtDate(d.date,'-'))}</td></tr>
+  </table>
+</div>
+<table class="v-jv-main">
+<colgroup>
+  <col style="width:13.4%"><col style="width:13.4%">
+  <col style="width:35.4%">
+  <col style="width:18.9%"><col style="width:18.9%">
+</colgroup>
+<thead><tr>
+  <th>Component<br>Code</th><th>Economic<br>Code</th>
+  <th>Head of Account</th>
+  <th>Amount (Tk.)<br>Dr.(+)</th><th>Amount (Tk.)<br>Cr (-)</th>
+</tr></thead>
+<tbody>
+  <tr><td>${esc(d.r1cc)}</td><td>${esc(d.r1ec)}</td>
+    <td class="jv-ctr">${esc(d.r1hoa||d.accountTypeName)}</td>
+    <td class="jv-amt">${esc(fmtAmt(totalDed))}</td><td></td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td></td><td></td><td class="jv-ctr"><strong>To</strong></td><td></td><td></td></tr>
+  ${jvCrs.map(r=>`<tr><td>${esc(r.cc)}</td><td></td><td class="jv-ctr">${esc(r.hoa)}</td><td></td><td class="jv-amt">${esc(r.amt)}</td></tr>`).join('')}
+  <tr><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr>
+    <td colspan="3" style="font-size:9pt;padding:3px 5px">In Words: ${esc(inWords)}</td>
+    <td class="jv-ctr"><strong>Total Tk.</strong> ${esc(fmtAmt(totalDed))}</td>
+    <td class="jv-amt">${esc(fmtAmt(totalDed))}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="font-size:9pt;padding:3px 5px">Remarks: Being the deduction adjusted against the ${esc(d.accountTypeName||d.r1hoa||'')} (${esc(d.remarks||'')})</td>
+    <td class="jv-ctr">${cashCheque}</td>
+    <td style="font-size:9pt;padding:3px 4px;vertical-align:top">Date: ${esc(fmtDate(d.date,'.'))}</td>
+  </tr>
+</tbody>
+</table>
+<div class="v-rcv-outer">
+  <table class="v-rcv-tbl">
+    <tr><td colspan="2" class="v-rcv-head"><em>Received by</em></td></tr>
+    <tr><td class="v-rcv-sig-cell" colspan="2">${rcvSigHtml()}</td></tr>
+    <tr><td>Signature</td><td></td></tr>
+    <tr><td>Name in Full</td><td>${esc(d.rcvName||'')}</td></tr>
+    <tr><td>Date</td><td>${d.rcvDate?esc(fmtDate(d.rcvDate,'-')):''}</td></tr>
+  </table>
+</div>
+<table class="v-sig-tbl">
+  <tr>
+    <td class="v-sig-img-cell">${sigImgHtml('prepared')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('checked')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('approved')}</td>
+  </tr>
+  <tr>
+    <td class="v-sig-head">Prepared by</td>
+    <td class="v-sig-head">Checked and Forwarded by</td>
+    <td class="v-sig-head">Approved by</td>
+  </tr>
+  <tr>
+    <td>${esc(d.preparedBy)}</td>
+    <td>${esc(d.checkedBy)}</td>
+    <td>${esc(d.approvedBy)}</td>
+  </tr>
+</table>`;
+}
+
+function buildAdvanceJvPreview(d,c){
+  const advCc=d.advCc||d.r1cc;
+  const advHoa=d.r1hoa||d.accountTypeName||'';
+  const inWords=c.gross>0?numberToWords(c.gross)+' taka only':'';
+  const cashCheque=d.payMode==='Cash'?'<strong>CASH</strong>':esc(d.chequeNo);
+  const remarks='Being the adjustment of advance against '+advHoa.toLowerCase()+(d.remarks?' ('+esc(d.remarks)+')':'')+'.';
+  return`
+${buildVoucherHeader()}
+<p class="v-jv-title">Journal Voucher- RPL</p>
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+  <table class="v-vd-tbl">
+    <tr><td>JV. No.</td><td>${esc(d.advJvNo||'01')}</td></tr>
+    <tr><td>Date</td><td>${esc(fmtDate(d.date,'-'))}</td></tr>
+  </table>
+</div>
+<table class="v-jv-main">
+<colgroup>
+  <col style="width:13.4%"><col style="width:13.4%">
+  <col style="width:35.4%">
+  <col style="width:18.9%"><col style="width:18.9%">
+</colgroup>
+<thead><tr>
+  <th>Component<br>Code</th><th>Economic<br>Code</th>
+  <th>Head of Account</th>
+  <th>Amount (Tk.)<br>Dr.(+)</th><th>Amount (Tk.)<br>Cr (-)</th>
+</tr></thead>
+<tbody>
+  <tr><td>${esc(d.r1cc)}</td><td>${esc(d.r1ec)}</td>
+    <td class="jv-ctr">${esc(advHoa)}</td>
+    <td class="jv-amt">${esc(fmtAmt(c.gross))}</td><td></td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td></td><td></td><td class="jv-ctr"><strong>To</strong></td><td></td><td></td></tr>
+  <tr><td></td><td>${esc(advCc)}</td><td class="jv-ctr">Advance</td><td></td><td class="jv-amt">${esc(fmtAmt(c.gross))}</td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr>
+    <td colspan="3" style="font-size:9pt;padding:3px 5px">In Words: ${esc(inWords)}</td>
+    <td class="jv-ctr"><strong>Total Tk.</strong> ${esc(fmtAmt(c.gross))}</td>
+    <td class="jv-amt">${esc(fmtAmt(c.gross))}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="font-size:9pt;padding:3px 5px">Remarks: ${remarks}</td>
+    <td class="jv-ctr">${cashCheque}</td>
+    <td style="font-size:9pt;padding:3px 4px;vertical-align:top">Date: ${esc(fmtDate(d.date,'.'))}</td>
+  </tr>
+</tbody>
+</table>
+<div class="v-rcv-outer">
+  <table class="v-rcv-tbl">
+    <tr><td colspan="2" class="v-rcv-head"><em>Received by</em></td></tr>
+    <tr><td class="v-rcv-sig-cell" colspan="2">${rcvSigHtml()}</td></tr>
+    <tr><td>Signature</td><td></td></tr>
+    <tr><td>Name in Full</td><td>${esc(d.rcvName||'')}</td></tr>
+    <tr><td>Date</td><td>${d.rcvDate?esc(fmtDate(d.rcvDate,'-')):''}</td></tr>
+  </table>
+</div>
+<table class="v-sig-tbl">
+  <tr>
+    <td class="v-sig-img-cell">${sigImgHtml('prepared')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('checked')}</td>
+    <td class="v-sig-img-cell">${sigImgHtml('approved')}</td>
+  </tr>
+  <tr>
+    <td class="v-sig-head">Prepared by</td>
+    <td class="v-sig-head">Checked and Forwarded by</td>
+    <td class="v-sig-head">Approved by</td>
+  </tr>
+  <tr>
+    <td>${esc(d.preparedBy)}</td>
+    <td>${esc(d.checkedBy)}</td>
+    <td>${esc(d.approvedBy)}</td>
+  </tr>
+</table>`;
+}
+
+function scalePreview(){
+  const panel=document.querySelector('.preview-panel');
+  const wrap=document.getElementById('vWrap');
+  const prev=document.getElementById('voucherPreview');
+  if(!panel||!wrap||!prev)return;
+  const avail=panel.offsetWidth-28;
+  const scale=Math.min(avail/794,1);
+  wrap.style.transform=`scale(${scale})`;
+  wrap.style.transformOrigin='top left';
+  wrap.style.width='794px';wrap.style.display='block';
+  const ph=prev.offsetHeight||700;
+  wrap.parentElement.style.minHeight=Math.ceil(ph*scale)+20+'px';
+}
+
+function update(){
+  const d=collectForm(),c=calcTotals(d);
+  updateSummary(d,c);
+  let previewHtml=buildPreview(d,c);
+  let pageNum=1;
+  const totalDed=c.vatAmt+c.itAmt+c.svcAmt;
+  if(d.additionalVoucher&&totalDed>0){
+    pageNum++;
+    const addlVrNo=nextVrNo(d.vrNo);
+    previewHtml+='<div class="v-page-break"></div>'
+      +'<div class="v-page-sep">&#8212; Page '+pageNum+' &nbsp;&bull;&nbsp; Govt Deduction Voucher (Vr. '+addlVrNo+') &#8212;</div>'
+      +buildAdditionalPreview(d,c);
+    pageNum++;
+    previewHtml+='<div class="v-page-break"></div>'
+      +'<div class="v-page-sep">&#8212; Page '+pageNum+' &nbsp;&bull;&nbsp; Journal Voucher (JV. No. '+d.jvNo+') &#8212;</div>'
+      +buildJVPreview(d,c);
+  }
+  if(d.isAdvanceJv&&c.gross>0){
+    pageNum++;
+    previewHtml+='<div class="v-page-break"></div>'
+      +'<div class="v-page-sep">&#8212; Page '+pageNum+' &nbsp;&bull;&nbsp; Advance Adjustment JV (JV. No. '+(d.advJvNo||'01')+') &#8212;</div>'
+      +buildAdvanceJvPreview(d,c);
+  }
+  document.getElementById('voucherPreview').innerHTML=previewHtml;
+  scalePreview();
+  saveState(d);
+}
+
+/* ═══ DOCX GENERATION ══════════════════════════════════════════ */
+function nextVrNo(v){
+  const m=v.match(/^(\D*)(\d+)(\D*)$/);
+  if(m)return m[1]+String(parseInt(m[2],10)+1).padStart(m[2].length,'0')+m[3];
+  return v+'-2';
+}
+
+function buildTokenMap(d,c,overrides){
+  const base={
+    '{{VOUCHER_TITLE}}':'Debit Voucher',
+    '{{CASH_MARK}}':d.payMode==='Cash'?'\u221A':'X',
+    '{{BANK_MARK}}':d.payMode==='Bank'?'\u221A':'X',
+    '{{VR_NO}}':d.vrNo,'{{DATE}}':fmtDate(d.date,'-'),'{{SOURCE}}':d.source,
+    '{{R1_CC}}':d.r1cc,'{{R1_EC}}':d.r1ec,'{{R1_HOA}}':d.r1hoa,'{{R1_DR}}':fmtAmt(d.r1dr),
+    '{{R2_CC}}':d.r2cc,'{{R2_EC}}':d.r2ec,'{{R2_HOA}}':d.r2hoa,'{{R2_DR}}':fmtAmt(d.r2dr),
+    '{{R3_CC}}':d.r3cc,'{{R3_EC}}':d.r3ec,'{{R3_HOA}}':d.r3hoa,'{{R3_DR}}':fmtAmt(d.r3dr),
+    '{{TOTAL_GROSS}}':fmtAmt(c.gross),
+    '{{VAT_PCT}}':fmtPct(d.vatPct),'{{VAT_DEDUCTION}}':fmtAmt(c.vatAmt),
+    '{{INCLUDING_IT}}':fmtAmt(c.afterVat),
+    '{{IT_PCT}}':fmtPct(d.itPct),'{{IT_DEDUCTION}}':fmtAmt(c.itAmt),
+    '{{SERVICE_PCT}}':fmtPct(d.svcPct),'{{SERVICE_CHARGE}}':fmtAmt(c.svcAmt),
+    '{{RET_PCT}}':fmtPct(d.retPct),'{{RETENTION_AMT}}':fmtAmt(c.retAmt),
+    '{{IN_WORDS}}':c.netPaymt>0?numberToWords(c.netPaymt)+' taka only':'',
+    '{{NET_PAYMENT}}':fmtAmt(c.netPaymt),'{{REMARKS}}':d.remarks,
+    '{{CHEQUE_NO}}':d.payMode==='Cash'?'CASH':d.chequeNo,'{{CHEQUE_DATE}}':fmtDate(d.chequeDate,'.'),
+    '{{PREPARED_BY}}':d.preparedBy,'{{CHECKED_BY}}':d.checkedBy,'{{APPROVED_BY}}':d.approvedBy,
+  };
+  return Object.assign(base,overrides||{});
+}
+
+async function buildDocxBlob(tokenMap_or_entry){
+  // Accepts either a pre-built token map or a logbook entry (for re-download)
+  let tokens;
+  if(tokenMap_or_entry && typeof tokenMap_or_entry === 'object' && tokenMap_or_entry.id){
+    // Reconstruct from logbook entry
+    const e=tokenMap_or_entry;
+    const d={...e};const c=calcTotals(d);
+    tokens=buildTokenMap(d,c);
+  } else {
+    tokens=tokenMap_or_entry;
+  }
+  const binary=atob(VOUCHER_TEMPLATE_BASE64);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  const zip=await JSZip.loadAsync(bytes);
+  let xml=await zip.file('word/document.xml').async('string');
+  for(const[tok,val]of Object.entries(tokens))
+    xml=xml.split(tok).join(escXml(val||''));
+  zip.file('word/document.xml',xml);
+  return await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+}
+
+async function buildJvDocxBlob(jvTokens){
+  const binary=atob(JV_TEMPLATE_BASE64);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  const zip=await JSZip.loadAsync(bytes);
+  let xml=await zip.file('word/document.xml').async('string');
+  for(const[tok,val]of Object.entries(jvTokens)) xml=xml.split(tok).join(escXml(val||''));
+  zip.file('word/document.xml',xml);
+  return await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+}
+
+function downloadBlob(blob, filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+
+async function buildDocx(tokenMap_or_entry, filename){
+  try{
+    const blob=await buildDocxBlob(tokenMap_or_entry);
+    downloadBlob(blob, filename||'Debit_Voucher.docx');
+  }catch(err){alert('DOCX error: '+err.message);console.error(err);}
+}
+
+async function generateAll(){
+  const d=collectForm(),c=calcTotals(d);
+  const mainId=genId();
+  const vrNo=d.vrNo;
+  const jvNo2=d.jvNo||'01';
+  const filename=`Debit_Voucher_${vrNo.replace(/\s+/g,'_')}.docx`;
+
+  // Collect every DOCX we generate here, then deliver as ONE download at the
+  // end (a single file if there's only one, otherwise a .zip bundle).
+  // Triggering several separate a.click() downloads in a row gets silently
+  // blocked by most browsers' "this site is trying to download multiple
+  // files" guard, which is why only the first document used to come through.
+  const outFiles=[];
+
+  // Build main token map
+  const mainTokens=buildTokenMap(d,c);
+  outFiles.push({name:filename, blob:await buildDocxBlob(mainTokens)});
+
+  // Save to logbook
+  const mainEntry={id:mainId,...d,...c,
+    displayDate:fmtDate(d.date,'-'),
+    description:d.r1hoa||d.accountTypeName||'',
+    voucherType:'Debit Voucher',
+    isAdditional:false,additionalIds:[]
+  };
+
+  // Additional Govt-Deduction voucher if needed
+  if(d.additionalVoucher && (c.vatAmt>0||c.itAmt>0)){
+    const addlId=genId();
+    const addlVrNo=nextVrNo(vrNo);
+    const addlGross=c.vatAmt+c.itAmt;
+    const addlInWords=addlGross>0?numberToWords(addlGross)+' taka only':'';
+    const dedParts=[];
+    if(c.vatAmt>0) dedParts.push('VAT');
+    if(c.itAmt>0) dedParts.push('IT');
+    const dedLabel=dedParts.join(' & ')||'VAT & IT';
+    const addlHoa='Govt Deduction — '+dedLabel+' for '+( d.r1hoa||d.accountTypeName);
+
+    const addlRows=[];
+    if(c.vatAmt>0) addlRows.push({cc:d.r1cc,ec:'',hoa:'VAT',dr:fmtAmt(c.vatAmt)});
+    if(c.itAmt>0)  addlRows.push({cc:d.r1cc,ec:'',hoa:'IT', dr:fmtAmt(c.itAmt)});
+    while(addlRows.length<3) addlRows.push({cc:'',ec:'',hoa:'',dr:''});
+
+    const addlRemarks=dedLabel+' deducted from '+(d.r1hoa||d.accountTypeName);
+
+    const addlTokens={
+      '{{VOUCHER_TITLE}}':'Debit Voucher',
+      '{{CASH_MARK}}':mainTokens['{{CASH_MARK}}'],
+      '{{BANK_MARK}}':mainTokens['{{BANK_MARK}}'],
+      '{{VR_NO}}':addlVrNo,'{{DATE}}':fmtDate(d.date,'-'),'{{SOURCE}}':d.source,
+      '{{R1_CC}}':addlRows[0].cc,'{{R1_EC}}':addlRows[0].ec,'{{R1_HOA}}':addlRows[0].hoa,'{{R1_DR}}':addlRows[0].dr,
+      '{{R2_CC}}':addlRows[1].cc,'{{R2_EC}}':addlRows[1].ec,'{{R2_HOA}}':addlRows[1].hoa,'{{R2_DR}}':addlRows[1].dr,
+      '{{R3_CC}}':addlRows[2].cc,'{{R3_EC}}':addlRows[2].ec,'{{R3_HOA}}':addlRows[2].hoa,'{{R3_DR}}':addlRows[2].dr,
+      '{{TOTAL_GROSS}}':fmtAmt(addlGross),
+      '{{VAT_PCT}}':'','{{VAT_DEDUCTION}}':fmtAmt(c.vatAmt),
+      '{{INCLUDING_IT}}':'','{{IT_PCT}}':'','{{IT_DEDUCTION}}':fmtAmt(c.itAmt),
+      '{{SERVICE_PCT}}':'','{{SERVICE_CHARGE}}':'',
+      '{{RET_PCT}}':'','{{RETENTION_AMT}}':'',
+      '{{IN_WORDS}}':addlInWords,'{{NET_PAYMENT}}':fmtAmt(addlGross),
+      '{{REMARKS}}':addlRemarks,
+      '{{CHEQUE_NO}}':'','{{CHEQUE_DATE}}':fmtDate(d.chequeDate,'.'),
+      '{{PREPARED_BY}}':d.preparedBy,'{{CHECKED_BY}}':d.checkedBy,'{{APPROVED_BY}}':d.approvedBy,
+    };
+    const addlFilename=`Debit_Voucher_${addlVrNo.replace(/[^\w]/g,'_')}_GovtDeduction.docx`;
+    outFiles.push({name:addlFilename, blob:await buildDocxBlob(addlTokens)});
+
+    const addlEntry={id:addlId,accountTypeId:d.accountTypeId,
+      accountTypeName:d.accountTypeName+' (Govt Deduction)',
+      vrNo:addlVrNo,date:d.date,displayDate:fmtDate(d.date,'-'),
+      payMode:d.payMode,source:d.source,
+      r1cc:d.r1cc,r1ec:dedLabel,r1hoa:addlHoa,r1dr:addlGross,
+      r2cc:'',r2ec:'',r2hoa:'',r2dr:0,
+      r3cc:'',r3ec:'',r3hoa:'',r3dr:0,
+      vatPct:0,itPct:0,svcPct:0,retPct:0,
+      gross:addlGross,vatAmt:c.vatAmt,afterVat:0,itAmt:c.itAmt,svcAmt:0,retAmt:0,
+      netPaymt:addlGross,
+      remarks:addlTokens['{{REMARKS}}'],
+      chequeNo:d.chequeNo,chequeDate:d.chequeDate,
+      preparedBy:d.preparedBy,checkedBy:d.checkedBy,approvedBy:d.approvedBy,
+      description:dedLabel+' deducted from '+(d.r1hoa||d.accountTypeName||''),
+      voucherType:'Govt Deduction Voucher',
+      isAdditional:true,parentId:mainId
+    };
+    addLogEntry(addlEntry);
+    mainEntry.additionalIds.push(addlId);
+    mainEntry.jvNo=jvNo2;
+  }
+
+  // ── Advance Adjustment Journal Voucher (optional, independent of account type) ──
+  if(d.isAdvanceJv && c.gross>0){
+    const advId=genId();
+    const advJvNo=d.advJvNo||'01';
+    const advCc=d.advCc||d.r1cc;
+    const advHoa=d.r1hoa||d.accountTypeName||'';
+    const advRemarks='Being the adjustment of advance against '+advHoa.toLowerCase()+(d.remarks?' ('+d.remarks+')':'')+'.';
+    const advJvTokens={
+      '{{JV_DATE}}': fmtDate(d.date,'.'),
+      '{{JV_DATE2}}':fmtDate(d.date,'.'),
+      '{{JV_NO}}':   advJvNo,
+      '{{JV_DR_CC}}':d.r1cc,
+      '{{JV_DR_EC}}':d.r1ec,
+      '{{JV_DR_HOA}}':advHoa,
+      '{{JV_DR_AMT}}':fmtAmt(c.gross),
+      '{{JV_CR1_CC}}':advCc,'{{JV_CR1_HOA}}':'Advance','{{JV_CR1_AMT}}':fmtAmt(c.gross),
+      '{{JV_CR2_CC}}':'','{{JV_CR2_HOA}}':'','{{JV_CR2_AMT}}':'',
+      '{{JV_CR3_CC}}':'','{{JV_CR3_HOA}}':'','{{JV_CR3_AMT}}':'',
+      '{{JV_CR4_CC}}':'','{{JV_CR4_HOA}}':'','{{JV_CR4_AMT}}':'',
+      '{{JV_IN_WORDS}}': c.gross>0?numberToWords(c.gross)+' taka only':'',
+      '{{JV_TOTAL_DR}}':fmtAmt(c.gross),
+      '{{JV_TOTAL_CR}}':fmtAmt(c.gross),
+      '{{JV_REMARKS}}':advRemarks,
+      '{{JV_CASH_CHEQUE}}':d.payMode==='Cash'?'Cash':d.chequeNo,
+      '{{JV_PREPARED_BY}}':d.preparedBy,
+      '{{JV_CHECKED_BY}}':d.checkedBy,
+      '{{JV_APPROVED_BY}}':d.approvedBy,
+    };
+    try{
+      const advBlob=await buildJvDocxBlob(advJvTokens);
+      outFiles.push({name:`Journal_Voucher_Advance_${advJvNo.replace(/[^\w]/g,'_')}.docx`, blob:advBlob});
+
+      const advEntry={id:advId,accountTypeId:d.accountTypeId,
+        accountTypeName:(d.accountTypeName||'Manual')+' (Advance Adjustment)',
+        vrNo:vrNo,date:d.date,displayDate:fmtDate(d.date,'-'),
+        payMode:d.payMode,source:d.source,
+        r1cc:d.r1cc,r1ec:d.r1ec,r1hoa:advHoa,r1dr:c.gross,
+        r2cc:'',r2ec:'',r2hoa:'',r2dr:0,
+        r3cc:'',r3ec:'',r3hoa:'',r3dr:0,
+        vatPct:0,itPct:0,svcPct:0,retPct:0,
+        gross:c.gross,vatAmt:0,afterVat:0,itAmt:0,svcAmt:0,retAmt:0,
+        netPaymt:c.gross,
+        remarks:advRemarks,
+        chequeNo:d.chequeNo,chequeDate:d.chequeDate,
+        preparedBy:d.preparedBy,checkedBy:d.checkedBy,approvedBy:d.approvedBy,
+        description:'Advance adjustment for '+advHoa,
+        voucherType:'Advance Adjustment JV',
+        isAdditional:true,parentId:mainId,jvNo:advJvNo
+      };
+      addLogEntry(advEntry);
+      mainEntry.additionalIds.push(advId);
+      mainEntry.advJvNo=advJvNo;
+    }catch(err){alert('Advance JV DOCX error: '+err.message);}
+  }
+
+  addLogEntry(mainEntry);
+
+  // ── Journal Voucher DOCX ─────────────────────────────────────────────
+  if(d.additionalVoucher && (c.vatAmt>0||c.itAmt>0||c.svcAmt>0)){
+    const totalDed2=c.vatAmt+c.itAmt+c.svcAmt;
+    const jvCrs=[
+      {n:1,cc:c.vatAmt>0?d.r1cc:'',hoa:c.vatAmt>0?'VAT':'',   amt:c.vatAmt>0?fmtAmt(c.vatAmt):''},
+      {n:2,cc:c.itAmt>0?d.r1cc:'', hoa:c.itAmt>0?'IT':'',    amt:c.itAmt>0?fmtAmt(c.itAmt):''},
+      {n:3,cc:c.svcAmt>0?d.r1cc:'',hoa:c.svcAmt>0?'Service Charge':'',amt:c.svcAmt>0?fmtAmt(c.svcAmt):''},
+      {n:4,cc:'',hoa:'',amt:''},
+    ];
+    const jvTokens={
+      '{{JV_DATE}}': fmtDate(d.date,'.'),
+      '{{JV_DATE2}}':fmtDate(d.date,'.'),
+      '{{JV_NO}}':   jvNo2,
+      '{{JV_DR_CC}}':d.r1cc,
+      '{{JV_DR_EC}}':d.r1ec,
+      '{{JV_DR_HOA}}':d.r1hoa||d.accountTypeName||'',
+      '{{JV_DR_AMT}}':fmtAmt(totalDed2),
+      '{{JV_CR1_CC}}':jvCrs[0].cc,'{{JV_CR1_HOA}}':jvCrs[0].hoa,'{{JV_CR1_AMT}}':jvCrs[0].amt,
+      '{{JV_CR2_CC}}':jvCrs[1].cc,'{{JV_CR2_HOA}}':jvCrs[1].hoa,'{{JV_CR2_AMT}}':jvCrs[1].amt,
+      '{{JV_CR3_CC}}':jvCrs[2].cc,'{{JV_CR3_HOA}}':jvCrs[2].hoa,'{{JV_CR3_AMT}}':jvCrs[2].amt,
+      '{{JV_CR4_CC}}':jvCrs[3].cc,'{{JV_CR4_HOA}}':jvCrs[3].hoa,'{{JV_CR4_AMT}}':jvCrs[3].amt,
+      '{{JV_IN_WORDS}}': totalDed2>0?numberToWords(totalDed2)+' taka only':'',
+      '{{JV_TOTAL_DR}}':fmtAmt(totalDed2),
+      '{{JV_TOTAL_CR}}':fmtAmt(totalDed2),
+      '{{JV_REMARKS}}':'Being the deduction adjusted against the '+(d.r1hoa||d.accountTypeName||'')+' ('+d.remarks+')',
+      '{{JV_CASH_CHEQUE}}':d.payMode==='Cash'?'Cash':d.chequeNo,
+      '{{JV_PREPARED_BY}}':d.preparedBy,
+      '{{JV_CHECKED_BY}}':d.checkedBy,
+      '{{JV_APPROVED_BY}}':d.approvedBy,
+    };
+    try{
+      const jvBlob=await buildJvDocxBlob(jvTokens);
+      outFiles.push({name:`Journal_Voucher_${jvNo2.replace(/[^\w]/g,'_')}.docx`, blob:jvBlob});
+    }catch(err){alert('JV DOCX error: '+err.message);}
+  }
+
+  // ── Single delivery: one file directly, or a zip bundle for 2–3 files ──
+  try{
+    if(outFiles.length<=1){
+      downloadBlob(outFiles[0].blob, outFiles[0].name);
+    }else{
+      const bundle=new JSZip();
+      outFiles.forEach(f=>bundle.file(f.name,f.blob));
+      const zipBlob=await bundle.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+      downloadBlob(zipBlob, `Vouchers_${vrNo.replace(/[^\w]/g,'_')}.zip`);
+    }
+  }catch(err){alert('Download bundling error: '+err.message);}
+}
+
+/* ═══ STATE PERSISTENCE ════════════════════════════════════════ */
+const LS_KEY='heat_voucher_v3';
+function saveState(d){try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch(e){}}
+function loadState(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);if(!raw)return;
+    const d=JSON.parse(raw);
+    const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+    set('vrNo',d.vrNo);set('jvNo',d.jvNo);set('vDate',d.date);set('source',d.source);
+    if(d.payMode){const el=document.querySelector(`input[name="payMode"][value="${d.payMode}"]`);if(el)el.checked=true;}
+    set('r1cc',d.r1cc);set('r1ec',d.r1ec);set('r1hoa',d.r1hoa);set('r1dr',d.r1dr||'');
+    set('r2cc',d.r2cc);set('r2ec',d.r2ec);set('r2hoa',d.r2hoa);set('r2dr',d.r2dr||'');
+    set('r3cc',d.r3cc);set('r3ec',d.r3ec);set('r3hoa',d.r3hoa);set('r3dr',d.r3dr||'');
+    set('vatPct',d.vatPct);set('itPct',d.itPct);set('svcPct',d.svcPct);set('retPct',d.retPct);
+    set('remarks',d.remarks);set('chequeNo',d.chequeNo);set('chequeDate',d.chequeDate);
+    set('preparedBy',d.preparedBy);set('checkedBy',d.checkedBy);set('approvedBy',d.approvedBy);
+    set('rcvName',d.rcvName);set('rcvDate',d.rcvDate);
+    if(d.accountTypeId){const el=document.getElementById('atSelect');if(el)el.value=d.accountTypeId;}
+    set('advJvNo',d.advJvNo);set('advCc',d.advCc);
+    if(d.isAdvanceJv){
+      const cb=document.getElementById('isAdvanceJv');
+      if(cb){cb.checked=true;document.getElementById('advanceJvFields').style.display='block';}
+    }
+  }catch(e){}
+}
+
+/* ═══ INIT ═════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('vDate').value=today;
+  document.getElementById('chequeDate').value=today;
+  populateTypeDropdown();
+  loadState();
+  applyAccountType();
+  document.querySelectorAll('input,textarea,select').forEach(el=>{
+    el.addEventListener('input',update);
+    el.addEventListener('change',update);
+  });
+  update();
+  window.addEventListener('resize',scalePreview);
+});
+</script>
+</body>
+</html>
