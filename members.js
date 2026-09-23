@@ -649,17 +649,14 @@ const MembersView = ({
     }
   }, ["Team ID", "Name", "Group", "Email", "Phone", "Joined", "To Do", "In Progress", "Overdue", "Done", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
     key: h,
-    className: i === 0 ? "sticky1" : i === 1 ? "sticky2" : "",
+    className: i === 1 ? "stickyname" : "",
     style: {
       padding: "10px 12px",
       fontSize: 11,
       letterSpacing: .5,
       color: "#8593A3",
       fontWeight: 600,
-      whiteSpace: "nowrap",
-      ...(i === 0 ? {
-        minWidth: 132
-      } : {})
+      whiteSpace: "nowrap"
     }
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, shownMembers.map(m => /*#__PURE__*/React.createElement("tr", {
     key: m.id,
@@ -672,15 +669,14 @@ const MembersView = ({
       background: m.leftDate ? "#1A0F0F" : "transparent"
     }
   }, /*#__PURE__*/React.createElement("td", {
-    className: "mono sticky1",
+    className: "mono",
     style: {
       padding: "10px 12px",
       color: "#8593A3",
-      whiteSpace: "nowrap",
-      minWidth: 132
+      whiteSpace: "nowrap"
     }
   }, m.teamId), /*#__PURE__*/React.createElement("td", {
-    className: "sticky2",
+    className: "stickyname",
     style: {
       padding: "10px 12px",
       whiteSpace: "nowrap"

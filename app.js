@@ -1355,17 +1355,14 @@ function App() {
     }
   }, ["ID", "Member", "Meeting", "Task", "Assigned", "Deadline", "Status", "Priority", "Remarks", ""].map((h, i) => /*#__PURE__*/React.createElement("th", {
     key: h,
-    className: i === 0 ? "sticky1" : i === 1 ? "sticky2" : "",
+    className: i === 1 ? "stickyname" : "",
     style: {
       padding: "10px 12px",
       fontSize: 11,
       letterSpacing: .5,
       color: "#8593A3",
       fontWeight: 600,
-      whiteSpace: "nowrap",
-      ...(i === 0 ? {
-        minWidth: 132
-      } : {})
+      whiteSpace: "nowrap"
     }
   }, h)))), /*#__PURE__*/React.createElement("tbody", null, filtered.map(t => {
     const ov = isOverdue(t);
@@ -1377,15 +1374,14 @@ function App() {
         borderTop: "1px solid #1F2733"
       }
     }, /*#__PURE__*/React.createElement("td", {
-      className: "mono sticky1",
+      className: "mono",
       style: {
         padding: "10px 12px",
         color: "#5B6675",
-        whiteSpace: "nowrap",
-        minWidth: 132
+        whiteSpace: "nowrap"
       }
     }, t.taskCode), /*#__PURE__*/React.createElement("td", {
-      className: "sticky2",
+      className: "stickyname",
       style: {
         padding: "10px 12px",
         whiteSpace: "nowrap"
@@ -1462,8 +1458,8 @@ function App() {
       style: {
         padding: "10px 12px",
         color: "#8593A3",
-        minWidth: 140,
-        maxWidth: 220
+        minWidth: 220,
+        maxWidth: 360
       }
     }, t.remarks || "—"), /*#__PURE__*/React.createElement("td", {
       style: {

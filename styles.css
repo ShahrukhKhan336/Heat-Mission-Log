@@ -12,32 +12,29 @@ table { border-collapse: separate; border-spacing: 0; width: 100%; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 select:focus, input:focus, textarea:focus { outline: none; border-color: #4F8CFF !important; }
 
-/* ── Frozen first two columns on wide tables ─────────────────── */
-.sticky1, .sticky2 {
+/* ── Frozen name column ─────────────────────────────────────── */
+/* The name pins to the left edge while every other column scrolls
+   beneath it. The ID / Team ID column scrolls away with the rest. */
+.stickyname {
   position: sticky;
+  left: 0;
   z-index: 2;
   background: #121821;
 }
-.sticky1 { left: 0; }
-.sticky2 { left: 132px; }
 
-/* header cells sit above body cells */
-thead .sticky1, thead .sticky2 {
+thead .stickyname {
   z-index: 3;
   background: #161D26;
 }
 
-/* keep hover colour consistent across the frozen cells */
-.rowhover:hover .sticky1,
-.rowhover:hover .sticky2 { background: #161D26; }
+.rowhover:hover .stickyname { background: #161D26; }
 
 /* former members keep their red tint while frozen */
-.leftrow .sticky1, .leftrow .sticky2 { background: #1A0F0F; }
-.leftrow.rowhover:hover .sticky1,
-.leftrow.rowhover:hover .sticky2 { background: #221414; }
+.leftrow .stickyname { background: #1A0F0F; }
+.leftrow.rowhover:hover .stickyname { background: #221414; }
 
-/* subtle divider so the frozen edge is visible while scrolling */
-.sticky2::after {
+/* divider marking the frozen edge */
+.stickyname::after {
   content: "";
   position: absolute;
   top: 0; right: 0; bottom: 0;
