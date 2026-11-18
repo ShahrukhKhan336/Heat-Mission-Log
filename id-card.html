@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HEAT identity card maker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -20,6 +20,15 @@
     --bg-app:#EEF3F8;
     --line:#DCE4EC;
     --panel:#FFFFFF;
+
+    /* card palette (matches the printed HEAT ID template) */
+    --navy:#0B1F42;
+    --navy-deep:#091835;
+    --navy-pill:#112C57;
+    --gold:#E1AD37;
+    --card-ink:#0B1630;
+    --card-label:#6B6F7D;
+    --card-rule:#E4E6EC;
   }
   *{box-sizing:border-box;}
   body{
@@ -151,247 +160,209 @@
   }
   .card-frame{
     display:inline-block;
-    border-radius:14px;
+    border-radius:0;
     box-shadow:0 10px 26px rgba(22,35,58,0.14), 0 2px 6px rgba(22,35,58,0.08);
   }
+
+  /* =====================================================
+     ID CARD  (400 x 252 px  =  CR80, 3.375 x 2.125 in)
+     Every element is positioned absolutely so the layout
+     matches the printed template exactly.
+     ===================================================== */
   .card{
     width:400px;
     height:252px;
     position:relative;
     background:var(--paper);
-    border-radius:14px;
+    border-radius:0;
     overflow:hidden;
     font-family:'Inter',sans-serif;
+    color:var(--card-ink);
   }
-  .spine{
-    position:absolute;
-    left:0;top:0;bottom:0;
-    width:7px;
-    background:var(--blue);
+  .card *{box-sizing:border-box;}
+  .card .abs{position:absolute;}
+
+  /* ----- shared header (starry navy band) ----- */
+  .hdr{
+    position:absolute;left:0;top:0;
+    width:400px;height:66px;
+    background:var(--navy);
+    border-bottom:3px solid var(--gold);
+    overflow:hidden;
   }
-  .card .content{
-    position:absolute;
-    left:21px;right:16px;top:14px;bottom:26px;
+  .hdr-art{position:absolute;left:0;top:0;width:400px;height:63px;display:block;}
+  .hdr .seal{position:absolute;left:11px;top:6px;width:54px;height:54px;display:block;}
+  .hdr-title{
+    position:absolute;left:72px;top:11px;
+    font:800 8.4px/11px 'Inter',sans-serif;
+    color:#fff;white-space:nowrap;letter-spacing:0.002em;
   }
-  .card.front .content{bottom:14px;}
-  .top-band{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:8px 0;
-    border-top:1px solid var(--line);
-    border-bottom:1px solid var(--line);
+  .hdr-dept{
+    position:absolute;left:72px;top:30px;
+    font:700 7.6px/10px 'Inter',sans-serif;
+    color:var(--gold);white-space:nowrap;letter-spacing:0.2em;
   }
-  .logo-mark{height:38px;display:block;flex-shrink:0;}
-  .logo-tagline{
-    flex:1;
-    font-size:7.3px;
-    font-weight:600;
-    color:var(--muted);
-    line-height:1.4;
-    text-align:center;
+  .hdr-sub{
+    position:absolute;left:72px;top:45px;
+    font:500 6.3px/10px 'Inter',sans-serif;
+    color:rgba(255,255,255,0.88);white-space:nowrap;
   }
-  .team-badge{
-    background:var(--blue);
-    color:#fff;
-    font-size:9.5px;
-    font-weight:700;
-    padding:4px 10px;
-    border-radius:20px;
-    white-space:nowrap;
-    flex-shrink:0;
+  .hdr-sub i{
+    display:inline-block;width:1px;height:7px;
+    background:rgba(255,255,255,0.65);
+    margin:0 4px;vertical-align:-1px;
   }
-  .id-body{
-    display:flex;
-    gap:11px;
-    margin-top:12px;
-    align-items:flex-start;
+  .heat-box{
+    position:absolute;left:327px;top:6px;
+    width:53px;height:53px;
+    background:#fff;
+    border:2px solid var(--gold);
+    border-radius:9px;
+    padding:3px;
   }
+  .heat-box img{width:100%;height:100%;object-fit:contain;display:block;}
+
+  .gold-rule{position:absolute;left:0;width:400px;height:2.5px;background:var(--gold);}
+  .wm{position:absolute;width:132px;height:132px;opacity:0.09;display:block;}
+
+  /* ----- front ----- */
   .photo-box{
-    width:68px;
-    height:84px;
-    border-radius:6px;
-    border:2px solid var(--blue);
+    position:absolute;left:20px;top:79px;
+    width:82px;height:101px;
+    border:3px solid var(--gold);
+    border-radius:7px;
     background:#F3F7FB;
     cursor:pointer;
     overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-shrink:0;
-    position:relative;
+    display:flex;align-items:center;justify-content:center;
   }
-  .photo-box img{width:100%;height:100%;object-fit:cover;}
+  .photo-box img{width:100%;height:100%;object-fit:cover;display:block;}
   .photo-box .ph-empty{
     text-align:center;
-    color:var(--blue);
-    font-size:9px;
+    color:var(--navy-pill);
+    font-size:8px;
     font-weight:600;
     line-height:1.4;
     padding:4px;
   }
   .photo-box .ph-empty svg{display:block;margin:0 auto 3px;}
-  .id-text{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1;}
-  .id-text .name{
-    font-family:'Manrope',sans-serif;
-    font-size:16px;
-    font-weight:800;
-    color:var(--ink);
-    line-height:1.18;
-    word-break:break-word;
-  }
-  .id-text .role-line{
-    font-size:10.5px;
-    font-weight:700;
-    margin-top:3px;
-    word-break:break-word;
-  }
-  .id-text .meta{
-    margin-top:9px;
-    font-size:9.3px;
-    color:var(--muted);
-    line-height:1.65;
-  }
-  .id-text .meta b{color:var(--ink);font-weight:600;}
-  .id-qr{
-    width:80px;
-    flex-shrink:0;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-  }
-  .office-block{
-    margin-top:17px;
-    padding-top:7px;
-    border-top:1px solid var(--line);
-  }
-  .office-block .office-value,
-  .office-block .office-email{
-    font-size:8.6px;
-    color:var(--ink);
-    line-height:1.42;
-  }
-  .office-block .office-value b,
-  .office-block .office-email b{
-    color:var(--muted);
-    font-weight:700;
-  }
-  .office-block .office-value{
-    display:-webkit-box;
-    -webkit-line-clamp:3;
-    -webkit-box-orient:vertical;
-    overflow:hidden;
-  }
-  .office-block .office-email{
-    margin-top:4px;
-  }
-  .card .footer-bar{
-    position:absolute;
-    left:0;right:0;bottom:0;
-    height:22px;
-    background:var(--blue);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-    font-size:8.3px;
-    letter-spacing:0.02em;
-    font-weight:500;
-  }
-  .card.front .footer-bar{height:10px;}
 
-  /* back */
-  .card.back .header-bar{
-    height:18px;
-    background:var(--blue-dark);
+  .name{
+    position:absolute;left:117px;top:82.2px;
+    width:182px;height:17px;
+    font:800 15.5px/17px 'Inter',sans-serif;
+    color:var(--card-ink);
+    white-space:nowrap;overflow:hidden;
+  }
+  .name.two{
+    top:80px;height:26px;
+    white-space:normal;
+    line-height:13px;
+  }
+  .pill{
+    position:absolute;left:117px;top:109px;
+    max-width:182px;height:17px;
+    padding:0 7.5px 0 9px;
+    border-radius:9px;
+    background:var(--navy-pill);
     color:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:8.6px;
-    font-weight:600;
-    letter-spacing:0.03em;
+    font:700 7.4px/17px 'Inter',sans-serif;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;
   }
-  .card.back .back-content{
-    padding:9px 17px 0 17px;
-  }
-  .qr-wrap{position:relative;width:80px;height:80px;}
-  .qr-wrap canvas, .qr-wrap img{width:80px !important;height:80px !important;display:block;object-fit:contain;}
-  .qr-icon{
+  .lbl{
     position:absolute;
-    top:50%;left:50%;
-    transform:translate(-50%,-50%);
+    font:600 6.45px/7px 'Inter',sans-serif;
+    letter-spacing:0.17em;
+    color:var(--card-label);
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .val{
+    position:absolute;
+    font:700 9.2px/10px 'Inter',sans-serif;
+    color:var(--card-ink);
+    white-space:nowrap;
+  }
+  .val.fv{font-size:9.9px;}
+  .card.back .lbl{font-size:6.35px;}
+  .card.back .hdr-sub{font-size:6.15px;}
+
+  .qr-card{
+    position:absolute;left:306px;top:77px;
+    width:78px;height:78px;
+    background:#fff;
+    border:1.2px solid #DDE1EA;
+    border-radius:8px;
+    box-shadow:0 1px 4px rgba(20,30,60,0.14);
+  }
+  .qr-card img{
+    position:absolute;left:5.5px;top:5.5px;
+    width:65px;height:65px;display:block;object-fit:contain;
   }
   .qr-caption{
-    font-size:6.2px;
-    font-weight:600;
-    color:var(--muted);
-    text-align:center;
-    line-height:1.25;
-    margin-top:3px;
+    position:absolute;left:296px;width:98px;top:157.4px;
+    font:500 6.04px/9px 'Inter',sans-serif;
+    color:#5F6471;text-align:center;white-space:nowrap;
   }
-  .detail-row{
-    display:grid;
-    grid-template-columns:58px 1fr;
-    gap:5px;
-    padding:3px 0;
-    border-bottom:1px solid var(--line);
-    font-size:9.2px;
+
+  .ftr{
+    position:absolute;left:0;top:201.5px;
+    width:400px;height:50.5px;
+    background:var(--navy-deep);
+    padding:3.9px 12px 0 20px;
+    color:#fff;
+    font:500 6.77px/12.3px 'Inter',sans-serif;
   }
-  .detail-row .dl{color:var(--muted);font-weight:600;}
-  .detail-row .dv{color:var(--ink);line-height:1.32;}
-  .detail-row .dv.addr{
-    display:-webkit-box;
-    -webkit-line-clamp:2;
-    -webkit-box-orient:vertical;
+  .ftr b{color:var(--gold);font-weight:700;}
+  .ftr-office{position:relative;padding-left:25.5px;}
+  .ftr-office b{position:absolute;left:0;top:0;}
+  .ftr-mail{position:relative;padding-left:25.5px;margin-top:0.5px;}
+  .ftr-mail b{position:absolute;left:0;top:0;}
+
+  /* ----- back ----- */
+  .rule{position:absolute;left:20px;width:360px;height:1px;background:var(--card-rule);}
+  .lbl.xl{left:20px;}
+  .bv{
+    position:absolute;
+    font:500 8.2px/9px 'Inter',sans-serif;
+    color:var(--card-ink);
+    white-space:nowrap;
+  }
+  .bv.addr2{
+    white-space:normal;
+    width:252px;height:21.6px;
+    line-height:10.8px;
     overflow:hidden;
   }
-  .detail-row.split{
-    grid-template-columns:1fr 1fr;
-  }
-  .detail-row.split .mini{display:flex;flex-direction:column;}
-  .detail-row.split .dl{font-size:8.3px;}
-  .detail-row.split .dv{font-size:9.2px;}
-  .sig-area{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    margin-top:7px;
-    padding-bottom:4px;
-  }
   .sig-box{
-    width:150px;
+    position:absolute;left:245px;top:171px;width:135px;
     cursor:pointer;
   }
   .sig-img-wrap{
-    height:32px;
-    display:flex;
-    align-items:flex-end;
-    justify-content:center;
+    height:30px;
+    display:flex;align-items:flex-end;justify-content:center;
   }
-  .sig-img-wrap img{max-height:30px;max-width:150px;object-fit:contain;}
+  .sig-img-wrap img{max-height:28px;max-width:100px;object-fit:contain;display:block;}
   .sig-img-wrap .sig-empty{
-    font-size:8.6px;
-    color:var(--blue);
-    font-weight:600;
-    padding-bottom:3px;
+    font-size:7.5px;color:var(--navy-pill);font-weight:600;padding-bottom:3px;
   }
   .sig-line{
-    border-top:1px solid var(--ink);
-    margin-top:2px;
-    padding-top:3px;
+    border-top:1px solid var(--card-ink);
     text-align:center;
+    padding-top:2.9px;
   }
-  .sig-line .sig-caption{font-size:7.6px;color:var(--muted);font-weight:600;}
-  .sig-line .sig-name{font-size:9px;color:var(--ink);font-weight:600;margin-top:1px;min-height:11px;}
-  .id-tag{
-    font-size:8.6px;
-    color:var(--muted);
-    line-height:1.6;
-    text-align:left;
+  .sig-line .sig-name{font:700 7.5px/10px 'Inter',sans-serif;color:var(--card-ink);min-height:10px;white-space:nowrap;}
+  .sig-line .sig-caption{font:500 6.2px/8px 'Inter',sans-serif;color:var(--card-label);}
+  .ftr-b{
+    position:absolute;left:0;top:229.5px;
+    width:400px;height:22.5px;
+    background:var(--navy-deep);
+    color:#fff;text-align:center;
+    font:500 6.43px/20.7px 'Inter',sans-serif;
+    white-space:nowrap;
   }
-  .id-tag b{color:var(--ink);}
-  .card.back .footer-bar{font-size:7.8px;}
 
   .upload-input{display:none;}
 
@@ -428,7 +399,7 @@
       <div class="field-row">
         <div class="field">
           <label for="f-position">Position</label>
-          <input type="text" id="f-position" value="ASPM" placeholder="e.g. ASPM">
+          <input type="text" id="f-position" value="ASPM" placeholder="e.g. Research Associate">
         </div>
         <div class="field">
           <label for="f-idno">ID card no.</label>
@@ -437,18 +408,14 @@
       </div>
 
       <div class="field">
-        <label for="f-teamname">Team name</label>
-        <input type="text" id="f-teamname" value="Core Team" placeholder="e.g. Core Team">
-      </div>
-
-      <div class="field">
         <label for="f-team">Project PIN</label>
         <input type="text" id="f-team" value="13860">
       </div>
 
       <div class="field">
-        <label for="f-office">Office address</label>
-        <textarea id="f-office">HEAT subproject (13860) office, Aviation and Aerospace University, Bangladesh: Lalmonirhat campus, Mahendranagar, Lalmonirhat 5500</textarea>
+        <label for="f-office">Office address (front of card; press Enter to start a new line)</label>
+        <textarea id="f-office">HEAT Subproject (13860) Office, Aviation and Aerospace University, Bangladesh
+Lalmonirhat Campus, Mahendranagar, Lalmonirhat 5500</textarea>
       </div>
 
       <hr class="divider">
@@ -512,43 +479,71 @@
         <p class="caption">Front</p>
         <div class="card-frame">
           <div class="card front" id="cardFront">
-            <div class="spine"></div>
-            <div class="content">
-              <div class="top-band">
-                <img class="logo-mark" src="assets/logo.png" alt="HEAT">
-                <div class="logo-tagline">Higher Education Acceleration and Transformation<br>Sub Project 13860</div>
-                <span class="team-badge" id="p-team-name">Core Team</span>
-              </div>
-              <div class="id-body">
-                <div class="photo-box" id="photoBox" title="Click to upload photo">
-                  <div class="ph-empty" id="photoEmpty">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F5F9C" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-                    Click to<br>add photo
-                  </div>
-                  <img id="photoImg" style="display:none;">
-                </div>
-                <div class="id-text">
-                  <div class="name" id="p-name">Jordan Ahmed</div>
-                  <div class="role-line" id="p-position" style="color:#1F5F9C;">SPMT Member</div>
-                  <div class="meta">
-                    <div>Project PIN&nbsp; <b id="p-team">13860</b></div>
-                    <div>ID card no.&nbsp; <b id="p-idno">HEAT-0001</b></div>
-                  </div>
-                </div>
-                <div class="id-qr">
-                  <div class="qr-wrap">
-                    <img id="qrcodeFront" class="custom-qr" src="assets/qr-code.png" alt="Mission Log QR code">
-                  </div>
-                  <div class="qr-caption">Scan for Mission Log</div>
-                </div>
-              </div>
-              <div class="office-block">
-                <div class="office-value"><b>Office address:</b> <span id="p-office">HEAT subproject (13860) office, Aviation and Aerospace University, Bangladesh: Lalmonirhat campus, Mahendranagar, Lalmonirhat 5500</span></div>
-                <div class="office-email"><b>Email:</b> spmtheat@gmail.com</div>
-                <div class="office-email"><b>contact:</b> +8801707879735</div>
-              </div>
+
+            <img class="wm" style="left:174px;top:66px;" src="assets/aaub-watermark.png" alt="">
+
+            <!-- header -->
+            <div class="hdr">
+              <svg class="hdr-art" viewBox="0 0 400 63" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="hdrGradF" x1="0" y1="0" x2="1" y2="0.25">
+                    <stop offset="0" stop-color="#0A1D3E"/>
+                    <stop offset="0.55" stop-color="#0D2247"/>
+                    <stop offset="1" stop-color="#10285A"/>
+                  </linearGradient>
+                </defs>
+                <rect width="400" height="63" fill="url(#hdrGradF)"/>
+                <path d="M-10 54 C 90 6, 200 0, 330 14" stroke="#fff" stroke-opacity="0.11" stroke-width="0.7" fill="none"/>
+                <path d="M255 64 C 320 42, 370 30, 410 36" stroke="#fff" stroke-opacity="0.09" stroke-width="0.7" fill="none"/>
+                <g fill="#fff">
+                  <circle cx="120" cy="8" r="0.5" opacity="0.7"/><circle cx="195" cy="5" r="0.4" opacity="0.5"/>
+                  <circle cx="250" cy="9" r="0.5" opacity="0.6"/><circle cx="300" cy="6" r="0.6" opacity="0.8"/>
+                  <circle cx="320" cy="28" r="0.4" opacity="0.5"/><circle cx="385" cy="10" r="0.5" opacity="0.6"/>
+                  <circle cx="75" cy="58" r="0.4" opacity="0.5"/><circle cx="140" cy="52" r="0.5" opacity="0.6"/>
+                  <circle cx="230" cy="56" r="0.4" opacity="0.5"/><circle cx="285" cy="50" r="0.5" opacity="0.6"/>
+                  <circle cx="310" cy="44" r="0.4" opacity="0.5"/><circle cx="8" cy="28" r="0.5" opacity="0.6"/>
+                  <circle cx="70" cy="6" r="0.4" opacity="0.5"/><circle cx="165" cy="60" r="0.3" opacity="0.5"/>
+                  <circle cx="355" cy="52" r="0.4" opacity="0.5"/><circle cx="395" cy="40" r="0.4" opacity="0.5"/>
+                  <circle cx="210" cy="26" r="0.3" opacity="0.4"/><circle cx="262" cy="22" r="0.3" opacity="0.4"/>
+                  <circle cx="345" cy="6" r="0.4" opacity="0.5"/><circle cx="100" cy="30" r="0.3" opacity="0.4"/>
+                </g>
+              </svg>
+              <img class="seal" src="assets/aaub-seal.png" alt="AAUB seal">
+              <div class="hdr-title">AVIATION AND AEROSPACE UNIVERSITY, BANGLADESH</div>
+              <div class="hdr-dept">DEPARTMENT OF AEROSPACE ENGINEERING</div>
+              <div class="hdr-sub">HEAT<i></i>Higher Education Acceleration and Transformation<i></i>Sub Project 13860</div>
+              <div class="heat-box"><img src="assets/logo.png" alt="HEAT"></div>
             </div>
-            <div class="footer-bar"></div>
+
+            <!-- photo -->
+            <div class="photo-box" id="photoBox" title="Click to upload photo">
+              <div class="ph-empty" id="photoEmpty">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#112C57" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+                Click to<br>add photo
+              </div>
+              <img id="photoImg" style="display:none;">
+            </div>
+
+            <!-- identity text -->
+            <div class="name" id="p-name">Jordan Ahmed</div>
+            <div class="pill" id="p-position">SPMT Member</div>
+            <div class="lbl" style="left:117px;top:140.5px;">Project PIN</div>
+            <div class="lbl" style="left:185px;top:140.5px;">ID card no.</div>
+            <div class="val fv" id="p-team" style="left:117px;top:151.5px;">13860</div>
+            <div class="val fv" id="p-idno" style="left:185px;top:151.5px;">HEAT-0001</div>
+
+            <!-- QR -->
+            <div class="qr-card">
+              <img id="qrcodeFront" class="custom-qr" src="assets/qr-code.png" alt="Mission Log QR code">
+            </div>
+            <div class="qr-caption">Scan for Mission Log</div>
+
+            <!-- footer -->
+            <div class="gold-rule" style="top:199px;"></div>
+            <div class="ftr">
+              <div class="ftr-office"><b>Office:</b><div id="p-office"></div></div>
+              <div class="ftr-mail"><b>Email:</b>spmtheat@gmail.com</div>
+            </div>
           </div>
         </div>
       </div>
@@ -557,35 +552,87 @@
         <p class="caption">Back</p>
         <div class="card-frame">
           <div class="card back" id="cardBack">
-            <div class="header-bar">HEAT identity card</div>
-            <div class="back-content">
-              <div class="detail-row split">
-                <div class="mini"><span class="dl">DOB</span><span class="dv" id="b-dob">1 Jan 2000</span></div>
-                <div class="mini"><span class="dl">Joined</span><span class="dv" id="b-joined">15 Jan 2026</span></div>
-              </div>
-              <div class="detail-row"><div class="dl">Contact</div><div class="dv" id="b-contact">+880 1XXX-XXXXXX</div></div>
-              <div class="detail-row"><div class="dl">Email</div><div class="dv" id="b-email">spmtheat@gmail.com</div></div>
-              <div class="detail-row"><div class="dl">Present addr.</div><div class="dv addr" id="b-address-present">House/Road, Area, City, Bangladesh</div></div>
-              <div class="detail-row" style="border-bottom:none;"><div class="dl">Permanent addr.</div><div class="dv addr" id="b-address-permanent">House/Road, Area, City, Bangladesh</div></div>
 
-              <div class="sig-area">
-                <div class="id-tag">
-                  <div>Project PIN&nbsp; <b id="b-team">13860</b></div>
-                  <div>ID card no.&nbsp; <b id="b-idno">HEAT-0001</b></div>
-                </div>
-                <div class="sig-box" id="sigBox" title="Click to replace signature">
-                  <div class="sig-img-wrap">
-                    <span class="sig-empty" id="sigEmpty" style="display:none;">Click to add signature</span>
-                    <img id="sigImg" src="assets/signature.png" style="display:block;">
-                  </div>
-                  <div class="sig-line">
-                    <div class="sig-caption">Authorized signatory</div>
-                    <div class="sig-name" id="b-signame"></div>
-                  </div>
-                </div>
+            <img class="wm" style="left:140px;top:78px;width:136px;height:136px;" src="assets/aaub-watermark.png" alt="">
+
+            <!-- header -->
+            <div class="hdr">
+              <svg class="hdr-art" viewBox="0 0 400 63" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="hdrGradB" x1="0" y1="0" x2="1" y2="0.25">
+                    <stop offset="0" stop-color="#0A1D3E"/>
+                    <stop offset="0.55" stop-color="#0D2247"/>
+                    <stop offset="1" stop-color="#10285A"/>
+                  </linearGradient>
+                </defs>
+                <rect width="400" height="63" fill="url(#hdrGradB)"/>
+                <path d="M-10 54 C 90 6, 200 0, 330 14" stroke="#fff" stroke-opacity="0.11" stroke-width="0.7" fill="none"/>
+                <path d="M255 64 C 320 42, 370 30, 410 36" stroke="#fff" stroke-opacity="0.09" stroke-width="0.7" fill="none"/>
+                <g fill="#fff">
+                  <circle cx="120" cy="8" r="0.5" opacity="0.7"/><circle cx="195" cy="5" r="0.4" opacity="0.5"/>
+                  <circle cx="250" cy="9" r="0.5" opacity="0.6"/><circle cx="300" cy="6" r="0.6" opacity="0.8"/>
+                  <circle cx="320" cy="28" r="0.4" opacity="0.5"/><circle cx="385" cy="10" r="0.5" opacity="0.6"/>
+                  <circle cx="75" cy="58" r="0.4" opacity="0.5"/><circle cx="140" cy="52" r="0.5" opacity="0.6"/>
+                  <circle cx="230" cy="56" r="0.4" opacity="0.5"/><circle cx="285" cy="50" r="0.5" opacity="0.6"/>
+                  <circle cx="310" cy="44" r="0.4" opacity="0.5"/><circle cx="8" cy="28" r="0.5" opacity="0.6"/>
+                  <circle cx="70" cy="6" r="0.4" opacity="0.5"/><circle cx="165" cy="60" r="0.3" opacity="0.5"/>
+                  <circle cx="355" cy="52" r="0.4" opacity="0.5"/><circle cx="395" cy="40" r="0.4" opacity="0.5"/>
+                  <circle cx="210" cy="26" r="0.3" opacity="0.4"/><circle cx="262" cy="22" r="0.3" opacity="0.4"/>
+                  <circle cx="345" cy="6" r="0.4" opacity="0.5"/><circle cx="100" cy="30" r="0.3" opacity="0.4"/>
+                </g>
+              </svg>
+              <img class="seal" src="assets/aaub-seal.png" alt="AAUB seal">
+              <div class="hdr-title">AVIATION AND AEROSPACE UNIVERSITY, BANGLADESH</div>
+              <div class="hdr-dept">DEPARTMENT OF AEROSPACE ENGINEERING</div>
+              <div class="hdr-sub">HEAT IDENTITY CARD<i></i>Sub Project 13860</div>
+              <div class="heat-box"><img src="assets/logo.png" alt="HEAT"></div>
+            </div>
+
+            <!-- row 1: DOB / joined / contact -->
+            <div class="lbl" style="left:20px;top:79px;">Date of birth</div>
+            <div class="lbl" style="left:140px;top:79px;">Joined</div>
+            <div class="lbl" style="left:261px;top:79px;">Contact</div>
+            <div class="val" id="b-dob" style="left:20px;top:89.4px;">1 Jan 2000</div>
+            <div class="val" id="b-joined" style="left:140px;top:89.4px;">15 Jan 2026</div>
+            <div class="val" id="b-contact" style="left:261px;top:89.4px;">+880 1XXX-XXXXXX</div>
+            <div class="rule" style="top:108.5px;"></div>
+
+            <!-- email -->
+            <div class="lbl" style="left:20px;top:115px;">Email</div>
+            <div class="bv" id="b-email" style="left:128.5px;top:113.1px;width:251px;">spmtheat@gmail.com</div>
+            <div class="rule" style="top:126px;"></div>
+
+            <!-- present address -->
+            <div class="lbl" style="left:20px;top:132.5px;">Present address</div>
+            <div class="bv" id="b-address-present" style="left:128.5px;top:130.6px;width:251px;">House/Road, Area, City, Bangladesh</div>
+            <div class="rule" style="top:143.5px;"></div>
+
+            <!-- permanent address -->
+            <div class="lbl" style="left:20px;top:150px;">Permanent address</div>
+            <div class="bv addr2" id="b-address-permanent" style="left:128.5px;top:147px;">House/Road, Area, City, Bangladesh</div>
+            <div class="rule" style="top:173px;"></div>
+
+            <!-- PIN / ID -->
+            <div class="lbl" style="left:20px;top:188.5px;">Project PIN</div>
+            <div class="lbl" style="left:103px;top:188.5px;">ID card no.</div>
+            <div class="val" id="b-team" style="left:20px;top:198.4px;">13860</div>
+            <div class="val" id="b-idno" style="left:103px;top:198.4px;">HEAT-0001</div>
+
+            <!-- signature -->
+            <div class="sig-box" id="sigBox" title="Click to replace signature">
+              <div class="sig-img-wrap">
+                <span class="sig-empty" id="sigEmpty" style="display:none;">Click to add signature</span>
+                <img id="sigImg" src="assets/signature.png" style="display:block;">
+              </div>
+              <div class="sig-line">
+                <div class="sig-name" id="b-signame"></div>
+                <div class="sig-caption">Authorized Signatory</div>
               </div>
             </div>
-            <div class="footer-bar">This card remains the property of the HEAT project</div>
+
+            <!-- footer -->
+            <div class="gold-rule" style="top:227px;"></div>
+            <div class="ftr-b">This card remains the property of the HEAT Project, Aviation and Aerospace University, Bangladesh.</div>
           </div>
         </div>
       </div>
@@ -612,10 +659,34 @@
     return d + ' ' + months[m-1] + ' ' + y;
   }
 
+  // Shrink an element's font until it fits (width for single-line text, height for wrapped text),
+  // so long names / addresses never spill out of the card layout.
+  function fit(el, startPx, minPx, byHeight){
+    let s = startPx;
+    el.style.fontSize = s + 'px';
+    const over = () => byHeight ? el.scrollHeight > el.clientHeight + 0.5
+                                : el.scrollWidth  > el.clientWidth  + 0.5;
+    while(over() && s > minPx){
+      s -= 0.25;
+      el.style.fontSize = s + 'px';
+    }
+  }
+
+  // Name: one line at full size; if it will not fit, shrink a little, and if it still
+  // will not fit, wrap onto two lines at a smaller (but readable) size.
+  function fitName(){
+    const el = $('p-name');
+    el.classList.remove('two');
+    fit(el, 15.5, 12);
+    if(el.scrollWidth > el.clientWidth + 0.5){
+      el.classList.add('two');
+      fit(el, 12.5, 8, true);
+    }
+  }
+
   function sync(){
     const name = $('f-name').value || 'Full name';
     const position = $('f-position').value || 'Position';
-    const teamName = $('f-teamname').value;
     const team = $('f-team').value;
     const idno = $('f-idno').value;
     const office = $('f-office').value;
@@ -633,10 +704,17 @@
 
     $('p-name').textContent = name;
     $('p-position').textContent = position;
-    $('p-team-name').textContent = teamName;
     $('p-team').textContent = team;
     $('p-idno').textContent = idno;
-    $('p-office').textContent = office;
+
+    // office address: one <div> per line the user typed
+    const officeBox = $('p-office');
+    officeBox.innerHTML = '';
+    office.split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(line => {
+      const d = document.createElement('div');
+      d.textContent = line;
+      officeBox.appendChild(d);
+    });
 
     $('b-dob').textContent = fmtDate(dob);
     $('b-joined').textContent = fmtDate(joined);
@@ -647,6 +725,14 @@
     $('b-team').textContent = team;
     $('b-idno').textContent = idno;
     $('b-signame').textContent = signame;
+
+    // auto-fit long values
+    fitName();
+    fit($('p-position'), 7.4, 5);
+    fit($('b-email'), 8.2, 5.5);
+    fit($('b-address-present'), 8.2, 5.5);
+    fit($('b-address-permanent'), 8.2, 5.5, true);
+    fit($('b-signame'), 7.5, 5.5);
   }
 
   document.getElementById('form').addEventListener('input', sync);
@@ -655,6 +741,8 @@
     sync();
   });
   sync();
+  // re-measure once the web fonts have loaded
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(sync); }
 
   // Custom Mission Log QR image is embedded directly in the card.
 
@@ -728,7 +816,6 @@
     setVal('f-name',     p.get('name'));
     setVal('f-position', p.get('position'));
     setVal('f-idno',     p.get('idno'));
-    setVal('f-teamname', p.get('teamname'));
     setVal('f-team',     p.get('team'));
     setVal('f-contact',  p.get('contact'));
     setVal('f-email',    p.get('email'));
