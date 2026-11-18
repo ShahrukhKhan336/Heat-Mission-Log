@@ -311,15 +311,14 @@
     position:absolute;left:0;top:201.5px;
     width:400px;height:50.5px;
     background:var(--navy-deep);
-    padding:3.9px 12px 0 20px;
+    padding:5.2px 12px 0 12px;
+    text-align:center;
     color:#fff;
     font:500 6.77px/12.3px 'Inter',sans-serif;
   }
   .ftr b{color:var(--gold);font-weight:700;}
-  .ftr-office{position:relative;padding-left:25.5px;}
-  .ftr-office b{position:absolute;left:0;top:0;}
-  .ftr-mail{position:relative;padding-left:25.5px;margin-top:0.5px;}
-  .ftr-mail b{position:absolute;left:0;top:0;}
+  .ftr b{margin-right:3px;}
+  .ftr-mail{margin-top:0.5px;}
 
   /* ----- back ----- */
   .rule{position:absolute;left:20px;width:360px;height:1px;background:var(--card-rule);}
@@ -541,7 +540,7 @@ Lalmonirhat Campus, Mahendranagar, Lalmonirhat 5500</textarea>
             <!-- footer -->
             <div class="gold-rule" style="top:199px;"></div>
             <div class="ftr">
-              <div class="ftr-office"><b>Office:</b><div id="p-office"></div></div>
+              <div class="ftr-office"><div id="p-office"></div></div>
               <div class="ftr-mail"><b>Email:</b>spmtheat@gmail.com</div>
             </div>
           </div>
@@ -710,9 +709,14 @@ Lalmonirhat Campus, Mahendranagar, Lalmonirhat 5500</textarea>
     // office address: one <div> per line the user typed
     const officeBox = $('p-office');
     officeBox.innerHTML = '';
-    office.split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(line => {
+    office.split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach((line, i) => {
       const d = document.createElement('div');
-      d.textContent = line;
+      if(i === 0){
+        const lab = document.createElement('b');
+        lab.textContent = 'Office:';
+        d.appendChild(lab);
+      }
+      d.appendChild(document.createTextNode(line));
       officeBox.appendChild(d);
     });
 
